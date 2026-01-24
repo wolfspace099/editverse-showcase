@@ -13,6 +13,7 @@ interface DiscordLoginPopupProps {
 
 export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
   const supabase = getSupabaseClient()
+  
   const [loading, setLoading] = useState(false)
 
   const handleDiscordLogin = async () => {

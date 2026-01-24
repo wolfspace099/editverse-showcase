@@ -18,6 +18,7 @@ import {
 
 export function Header() {
   const supabase = getSupabaseClient()
+  
   const [isScrolled, setIsScrolled] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
