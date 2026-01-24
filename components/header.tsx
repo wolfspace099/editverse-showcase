@@ -1,18 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { LeLoLogo } from "./lelo-logo"
 import { Button } from "@/components/ui/button"
 import { DiscordLoginPopup } from "./login"
-import { createClient, SupabaseClient, User } from "@supabase/supabase-js"
-import { 
-  LogOut, 
-  UserCheck, 
-  Settings, 
-  Home, 
-  LayoutDashboard 
-} from "lucide-react"
+import { getSupabaseClient } from "@/lib/supabaseClient"
+import { UserCheck, LogOut, Settings, Home, LayoutDashboard } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,18 +16,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const supabase: SupabaseClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 export function Header() {
+  const supabase = getSupabaseClient()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const [popupOpen, setPopupOpen] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<any>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
+  // scroll visibility
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
@@ -46,16 +38,29 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [lastScrollY])
 
+  // auth listener
   useEffect(() => {
     supabase.auth.getSession().then(res => setUser(res.data?.session?.user ?? null))
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
     return () => authListener.subscription.unsubscribe()
+  }, [supabase])
+
+  // click outside menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
+    setMenuOpen(false)
   }
 
   return (
@@ -83,14 +88,14 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-4">
-            <a href="#process" className="text-white/60 hover:text-white transition-colors duration-200 px-3 py-2 text-sm">Our Process</a>
-            <a href="#team" className="text-white/60 hover:text-white transition-colors duration-200 px-3 py-2 text-sm">Our Team</a>
-            <a href="#testimonials" className="text-white/60 hover:text-white transition-colors duration-200 px-3 py-2 text-sm">Testimonials</a>
-            <a href="#faq" className="text-white/60 hover:text-white transition-colors duration-200 px-3 py-2 text-sm">FAQ</a>
+            <a href="#process" className="text-white/60 hover:text-white px-3 py-2 text-sm">Our Process</a>
+            <a href="#team" className="text-white/60 hover:text-white px-3 py-2 text-sm">Our Team</a>
+            <a href="#testimonials" className="text-white/60 hover:text-white px-3 py-2 text-sm">Testimonials</a>
+            <a href="#faq" className="text-white/60 hover:text-white px-3 py-2 text-sm">FAQ</a>
           </nav>
 
           {/* Account / Login / Join Now */}
-          <div className="relative flex items-center gap-3">
+          <div className="relative flex items-center gap-3" ref={menuRef}>
             {user ? (
               <>
                 {/* Dropdown */}
