@@ -1,6 +1,5 @@
 import { Button } from "./ui/button" 
 import { ArrowRight, Play } from "lucide-react"
-import { ParticleTextEffect } from "./particle-text-effect"
 import { InfiniteSlider } from "./ui/infinite-slider"
 import { ProgressiveBlur } from "./ui/progressive-blur"
 
