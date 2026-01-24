@@ -1,4 +1,4 @@
-import { Button } from "./ui/button"
+import { Button } from "./ui/button" 
 import { ArrowRight, Play } from "lucide-react"
 import { ParticleTextEffect } from "./particle-text-effect"
 import { InfiniteSlider } from "./ui/infinite-slider"
@@ -6,13 +6,13 @@ import { ProgressiveBlur } from "./ui/progressive-blur"
 
 export function HeroSection() {
   return (
-    <section className="py-20 px-4 relative overflow-hidden min-h-screen flex flex-col justify-between">
-      <div className="flex-1 flex items-start justify-center pt-20">
-        <ParticleTextEffect words={["WORKING WITH EDITORS, NOT AGAINST THEM"]} />
-      </div>
+    <section className="pt-32 pb-8 px-4 relative overflow-hidden flex flex-col justify-start">
 
-      <div className="container mx-auto text-center relative z-10 pb-8">
+      <div className="container mx-auto text-center relative z-10">
         <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-4xl font-bold text-white mb-4 text-balance">
+            Working with editors, <span className="text-white/70">not against them.</span>
+          </h2>
           <p className="text-lg text-white/50 mb-8 max-w-2xl mx-auto">
             Join our community of talented video editors. Learn from the best, access premium resources, and grow your career with us.
           </p>
@@ -86,7 +86,23 @@ export function HeroSection() {
               />
             </div>
           </div>
+
+          
+
+
         </div>
+        {/* Giga Dashboard Showcase Image Full Width */}
+<div className="relative w-full mt-24 mb-0">
+  <div className="relative w-full overflow-hidden">
+    <img
+      className="w-full object-cover rounded-3xl"
+      src="/images/dashboard-showcase.png"
+      alt="Dashboard showcase"
+    />
+    {/* Fade overlay at bottom to next section */}
+    <div className="absolute bottom-0 left-0 w-full h-32 md:h-48 bg-gradient-to-b from-transparent to-black" />
+  </div>
+</div>
       </div>
     </section>
   )
