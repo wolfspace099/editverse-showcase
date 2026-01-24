@@ -1,3 +1,5 @@
+"use client"
+
 import { LeLoLogo } from "./lelo-logo"
 
 export function Footer() {

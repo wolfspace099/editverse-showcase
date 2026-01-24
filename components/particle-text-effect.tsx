@@ -135,7 +135,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS }: ParticleTextEffect
   const wordIndexRef = useRef(0)
   const mouseRef = useRef({ x: 0, y: 0, isPressed: false, isRightClick: false })
 
-  const pixelSteps = 6
+  const pixelSteps = 15
   const drawAsPoints = true
 
   const generateRandomPos = (
