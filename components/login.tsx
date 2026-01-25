@@ -1,6 +1,6 @@
 "use client"
 
-import { FC, useState, useEffect } from "react"
+import { FC, useEffect, useState } from "react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +14,13 @@ interface DiscordLoginPopupProps {
   onClose?: () => void
 }
 
-type Step = "login" | "name" | "age" | "experience" | "reason" | "pending"
+type Step =
+  | "login"
+  | "name"
+  | "age"
+  | "experience"
+  | "reason"
+  | "pending"
 
 export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
   const supabase = getSupabaseClient()
@@ -24,7 +30,55 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [animateDirection, setAnimateDirection] = useState<"left" | "right">("right")
 
-  // Move to next onboarding step with animation
+  // Onboarding form state
+  const [name, setName] = useState("")
+  const [age, setAge] = useState("")
+  const [experience, setExperience] = useState("")
+  const [reason, setReason] = useState("")
+
+  // Check session and application on mount
+  useEffect(() => {
+    const checkUserApplication = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const { data: application, error } = await supabase
+          .from("applications")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .single()
+
+        if (application) {
+          // Application exists → skip onboarding
+          onClose?.()
+        } else {
+          // No application → show onboarding
+          setStep("name")
+          setShowLoginModal(false)
+        }
+      }
+    }
+
+    checkUserApplication()
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        const { data: application } = await supabase
+          .from("applications")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .single()
+        if (application) {
+          onClose?.()
+        } else {
+          setStep("name")
+          setShowLoginModal(false)
+        }
+      }
+    })
+
+    return () => listener.subscription.unsubscribe()
+  }, [onClose, supabase])
+
   const next = (nextStep: Step) => {
     setAnimateDirection("right")
     setLoading(true)
@@ -38,7 +92,6 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
   const confirmSkipYes = () => { setConfirmSkip(false); onClose?.() }
   const confirmSkipNo = () => setConfirmSkip(false)
 
-  // Supabase Discord OAuth login
   const handleDiscordLogin = async () => {
     setLoading(true)
     try {
@@ -52,20 +105,44 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
     }
   }
 
+  // Submit application
+  const submitApplication = async () => {
+    setLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error("Not signed in")
+
+      await supabase.from("applications").insert({
+        user_id: session.user.id,
+        name,
+        age,
+        experience,
+        reason,
+        status: "pending",
+      })
+
+      setStep("pending")
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const renderStepContent = () => {
     const fieldSpacing = "mt-6"
-    const slideClasses = `transition-transform duration-300 ease-out`
+    const slideClasses = `transition-transform duration-300 ease-out ${animateDirection === "right" ? "translate-x-0" : "translate-x-0"}`
 
     switch (step) {
       case "login":
         return (
           <div className={slideClasses}>
-            <CardHeader className="px-0">
-              <div className="w-16 h-16 mb-4">
+            <CardHeader className="px-0 flex flex-col items-center">
+              <div className="w-20 h-20 mb-4">
                 <LeLoLogo />
               </div>
               <CardTitle className="text-2xl text-white">Welcome</CardTitle>
-              <p className="text-sm text-white/60 mt-2">
+              <p className="text-sm text-white/60 mt-2 text-center">
                 Log in to start your onboarding and request access to our assets and courses.
               </p>
             </CardHeader>
@@ -89,29 +166,7 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
                   </>
                 )}
               </Button>
-
-              <p className="text-xs text-white/60 text-center">
-                Already have an account?{" "}
-                <span
-                  className="text-white underline cursor-pointer"
-                  onClick={() => setShowLoginModal(true)}
-                >
-                  Sign in
-                </span>
-              </p>
             </CardFooter>
-
-            <style jsx>{`
-              .loader-dots span { display: inline-block; }
-              .animate-bounce { animation: bounce 0.6s infinite ease-in-out; }
-              .delay-0 { animation-delay: 0s; }
-              .delay-150 { animation-delay: 0.15s; }
-              .delay-300 { animation-delay: 0.3s; }
-              @keyframes bounce {
-                0%, 80%, 100% { transform: scale(0); }
-                40% { transform: scale(1); }
-              }
-            `}</style>
           </div>
         )
 
@@ -119,39 +174,14 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
         return (
           <div className={slideClasses}>
             <CardHeader className="px-0">
-              <div className="flex items-center gap-2">
-                <div className="relative group">
-                  <HelpCircle className="w-5 h-5 text-white/60 cursor-pointer" />
-                  <div className="absolute left-6 top-1/2 -translate-y-1/2 w-64 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    <div className="bg-black border border-white/10 rounded-lg p-3 text-xs text-white/80 shadow-xl">
-                      We use your name to personalize your dashboard and welcome messages.
-                    </div>
-                  </div>
-                </div>
-                <CardTitle className="text-2xl text-white">What’s your name?</CardTitle>
-              </div>
-              <p className="text-sm text-white/60 mt-2">
-                Please provide your real name so we can greet you personally.
-              </p>
+              <CardTitle className="text-2xl text-white">What’s your name?</CardTitle>
             </CardHeader>
-
             <CardContent className={`px-0 ${fieldSpacing}`}>
-              <Input placeholder="Your name" autoFocus />
+              <Input placeholder="Your name" autoFocus value={name} onChange={(e) => setName(e.target.value)} />
             </CardContent>
-
             <CardFooter className="px-0 pt-6 flex justify-between">
-              <button
-                onClick={skipOnboarding}
-                className="text-sm text-white/50 hover:text-white"
-              >
-                Skip
-              </button>
-              <Button
-                onClick={() => next("age")}
-                className="bg-white text-black hover:bg-white/90"
-              >
-                Next
-              </Button>
+              <button onClick={skipOnboarding} className="text-sm text-white/50 hover:text-white">Skip</button>
+              <Button onClick={() => next("age")} className="bg-white text-black hover:bg-white/90">Next</Button>
             </CardFooter>
           </div>
         )
@@ -160,39 +190,14 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
         return (
           <div className={slideClasses}>
             <CardHeader className="px-0">
-              <div className="flex items-center gap-2">
-                <div className="relative group">
-                  <HelpCircle className="w-5 h-5 text-white/60 cursor-pointer" />
-                  <div className="absolute left-6 top-1/2 -translate-y-1/2 w-64 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    <div className="bg-black border border-white/10 rounded-lg p-3 text-xs text-white/80 shadow-xl">
-                      Your age helps us tailor the content and resources to your level.
-                    </div>
-                  </div>
-                </div>
-                <CardTitle className="text-2xl text-white">How old are you?</CardTitle>
-              </div>
-              <p className="text-sm text-white/60 mt-2">
-                Knowing your age helps us provide a better onboarding experience.
-              </p>
+              <CardTitle className="text-2xl text-white">How old are you?</CardTitle>
             </CardHeader>
-
             <CardContent className={`px-0 ${fieldSpacing}`}>
-              <Input type="number" placeholder="Your age" autoFocus />
+              <Input type="number" placeholder="Your age" value={age} onChange={(e) => setAge(e.target.value)} autoFocus />
             </CardContent>
-
             <CardFooter className="px-0 pt-6 flex justify-between">
-              <button
-                onClick={skipOnboarding}
-                className="text-sm text-white/50 hover:text-white"
-              >
-                Skip
-              </button>
-              <Button
-                onClick={() => next("experience")}
-                className="bg-white text-black hover:bg-white/90"
-              >
-                Next
-              </Button>
+              <button onClick={skipOnboarding} className="text-sm text-white/50 hover:text-white">Skip</button>
+              <Button onClick={() => next("experience")} className="bg-white text-black hover:bg-white/90">Next</Button>
             </CardFooter>
           </div>
         )
@@ -201,39 +206,14 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
         return (
           <div className={slideClasses}>
             <CardHeader className="px-0">
-              <div className="flex items-center gap-2">
-                <div className="relative group">
-                  <HelpCircle className="w-5 h-5 text-white/60 cursor-pointer" />
-                  <div className="absolute left-6 top-1/2 -translate-y-1/2 w-64 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    <div className="bg-black border border-white/10 rounded-lg p-3 text-xs text-white/80 shadow-xl">
-                      Share your current projects or skills so we know your background.
-                    </div>
-                  </div>
-                </div>
-                <CardTitle className="text-2xl text-white">Your experience</CardTitle>
-              </div>
-              <p className="text-sm text-white/60 mt-2">
-                This helps us understand your skill level and what content might suit you best.
-              </p>
+              <CardTitle className="text-2xl text-white">Your experience</CardTitle>
             </CardHeader>
-
             <CardContent className={`px-0 ${fieldSpacing}`}>
-              <Textarea placeholder="What are you currently working on or learning?" autoFocus />
+              <Textarea placeholder="What are you currently working on or learning?" value={experience} onChange={(e) => setExperience(e.target.value)} autoFocus />
             </CardContent>
-
             <CardFooter className="px-0 pt-6 flex justify-between">
-              <button
-                onClick={skipOnboarding}
-                className="text-sm text-white/50 hover:text-white"
-              >
-                Skip
-              </button>
-              <Button
-                onClick={() => next("reason")}
-                className="bg-white text-black hover:bg-white/90"
-              >
-                Next
-              </Button>
+              <button onClick={skipOnboarding} className="text-sm text-white/50 hover:text-white">Skip</button>
+              <Button onClick={() => next("reason")} className="bg-white text-black hover:bg-white/90">Next</Button>
             </CardFooter>
           </div>
         )
@@ -241,39 +221,15 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
       case "reason":
         return (
           <div className={slideClasses}>
-            <CardHeader className="px-0 flex items-center gap-2">
-              <div className="relative group">
-                <HelpCircle className="w-5 h-5 text-white/60 cursor-pointer" />
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 w-64 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                  <div className="bg-black border border-white/10 rounded-lg p-3 text-xs text-white/80 shadow-xl">
-                    We use this to review access requests manually.
-                  </div>
-                </div>
-              </div>
+            <CardHeader className="px-0">
               <CardTitle className="text-2xl text-white">Why do you want to join?</CardTitle>
             </CardHeader>
-
-            <p className="text-sm text-white/60 mt-2">
-              Share your motivation so we can provide the best experience for you.
-            </p>
-
             <CardContent className={`px-0 ${fieldSpacing}`}>
-              <Textarea placeholder="What do you hope to get out of this?" autoFocus />
+              <Textarea placeholder="What do you hope to get out of this?" value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
             </CardContent>
-
             <CardFooter className="px-0 pt-6 flex justify-between">
-              <button
-                onClick={skipOnboarding}
-                className="text-sm text-white/50 hover:text-white"
-              >
-                Skip
-              </button>
-              <Button
-                onClick={() => next("pending")}
-                className="bg-white text-black hover:bg-white/90"
-              >
-                Submit
-              </Button>
+              <button onClick={skipOnboarding} className="text-sm text-white/50 hover:text-white">Skip</button>
+              <Button onClick={submitApplication} className="bg-white text-black hover:bg-white/90">Submit</Button>
             </CardFooter>
           </div>
         )
@@ -295,18 +251,9 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
     <>
       {/* Main onboarding popup */}
       {!showLoginModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg"
-          onClick={onClose}
-        >
-          <Card
-            className="relative w-full max-w-4xl min-h-[480px] grid grid-cols-2 rounded-2xl shadow-2xl border border-white/10 bg-black overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors z-10"
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg" onClick={onClose}>
+          <Card className="relative w-full max-w-4xl min-h-[480px] grid grid-cols-2 rounded-2xl shadow-2xl border border-white/10 bg-black overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors z-10">
               <X className="w-5 h-5" />
             </button>
 
@@ -315,15 +262,10 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
             </div>
 
             <div className="relative hidden md:block">
-              <img
-                src="/images/login-visual.jpg"
-                alt="Visual"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              <img src="/images/login-visual.jpg" alt="Visual" className="absolute inset-0 w-full h-full object-cover"/>
               <div className="absolute inset-0 bg-black/40" />
             </div>
 
-            {/* Skip confirmation modal */}
             {confirmSkip && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20">
                 <Card className="w-full max-w-md p-6 rounded-2xl">
@@ -332,12 +274,8 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
                     If you skip, you won’t have access to courses or assets. You can reapply later in settings.
                   </CardContent>
                   <CardFooter className="mt-4 flex justify-end gap-4">
-                    <Button onClick={confirmSkipNo} className="bg-black text-white border border-white hover:bg-black/90">
-                      Cancel
-                    </Button>
-                    <Button onClick={confirmSkipYes} className="bg-white text-black hover:bg-white/90">
-                      Skip
-                    </Button>
+                    <Button onClick={confirmSkipNo} className="bg-black text-white border border-white hover:bg-black/90">Cancel</Button>
+                    <Button onClick={confirmSkipYes} className="bg-white text-black hover:bg-white/90">Skip</Button>
                   </CardFooter>
                 </Card>
               </div>
@@ -350,30 +288,20 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
       {showLoginModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg">
           <Card className="relative w-full max-w-md p-8 rounded-2xl shadow-2xl border border-white/10 bg-black overflow-hidden">
-            
-            <button
-              onClick={() => setShowLoginModal(false)}
-              className="absolute top-4 right-4 text-white/60 hover:text-white"
-            >
+            <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-white/60 hover:text-white">
               <X className="w-5 h-5" />
             </button>
 
             <CardHeader className="px-0 flex flex-col items-center">
-              <div className="w-24 h-24 mb-4">
+              <div className="w-20 h-20 mb-4">
                 <LeLoLogo />
               </div>
               <CardTitle className="text-2xl text-white text-center">Sign in</CardTitle>
-              <p className="text-sm text-white/60 mt-2 text-center">
-                Access your account by signing in with Discord.
-              </p>
+              <p className="text-sm text-white/60 mt-2 text-center">Access your account by signing in with Discord.</p>
             </CardHeader>
 
             <CardFooter className="px-0 pt-6 flex flex-col gap-4">
-              <Button
-                onClick={handleDiscordLogin}
-                disabled={loading}
-                className="w-full bg-black text-white border border-white hover:bg-black/90 rounded-lg flex items-center justify-center gap-2"
-              >
+              <Button onClick={handleDiscordLogin} disabled={loading} className="w-full bg-black text-white border border-white hover:bg-black/90 rounded-lg flex items-center justify-center gap-2">
                 {loading ? (
                   <span className="loader-dots relative w-6 h-4 flex items-center justify-between">
                     <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-0"></span>
@@ -387,32 +315,7 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
                   </>
                 )}
               </Button>
-
-              <p className="text-xs text-white/60 text-center">
-                Don't have an account yet?{" "}
-                <span
-                  className="text-white underline cursor-pointer"
-                  onClick={() => {
-                    setShowLoginModal(false)
-                    setStep("login")
-                  }}
-                >
-                  Sign up
-                </span>
-              </p>
             </CardFooter>
-
-            <style jsx>{`
-              .loader-dots span { display: inline-block; }
-              .animate-bounce { animation: bounce 0.6s infinite ease-in-out; }
-              .delay-0 { animation-delay: 0s; }
-              .delay-150 { animation-delay: 0.15s; }
-              .delay-300 { animation-delay: 0.3s; }
-              @keyframes bounce {
-                0%, 80%, 100% { transform: scale(0); }
-                40% { transform: scale(1); }
-              }
-            `}</style>
           </Card>
         </div>
       )}
