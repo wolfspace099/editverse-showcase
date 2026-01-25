@@ -1,6 +1,6 @@
 "use client"
 
-import { FC, useState } from "react"
+import { FC, useState, useEffect } from "react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,13 +14,7 @@ interface DiscordLoginPopupProps {
   onClose?: () => void
 }
 
-type Step =
-  | "login"
-  | "name"
-  | "age"
-  | "experience"
-  | "reason"
-  | "pending"
+type Step = "login" | "name" | "age" | "experience" | "reason" | "pending"
 
 export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
   const supabase = getSupabaseClient()
@@ -58,10 +52,9 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
     }
   }
 
-  // Render content per onboarding step
   const renderStepContent = () => {
     const fieldSpacing = "mt-6"
-    const slideClasses = `transition-transform duration-300 ease-out ${animateDirection === "right" ? "translate-x-0" : "translate-x-0"}`
+    const slideClasses = `transition-transform duration-300 ease-out`
 
     switch (step) {
       case "login":
@@ -103,7 +96,7 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
                   className="text-white underline cursor-pointer"
                   onClick={() => setShowLoginModal(true)}
                 >
-                Sign in
+                  Sign in
                 </span>
               </p>
             </CardFooter>
@@ -353,80 +346,76 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
         </div>
       )}
 
-      {/* Login modal (replaces main popup) */}
-{showLoginModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg">
-    <Card className="relative w-full max-w-md p-8 rounded-2xl shadow-2xl border border-white/10 bg-black overflow-hidden">
-      
-      <button
-        onClick={() => setShowLoginModal(false)}
-        className="absolute top-4 right-4 text-white/60 hover:text-white"
-      >
-        <X className="w-5 h-5" />
-      </button>
+      {/* Login modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg">
+          <Card className="relative w-full max-w-md p-8 rounded-2xl shadow-2xl border border-white/10 bg-black overflow-hidden">
+            
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="absolute top-4 right-4 text-white/60 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-      <CardHeader className="px-0">
-        <div className="flex items-center justify-center w-full h-full">
-          <div className="w-16 h-16 mb-4">
-            <LeLoLogo />
-          </div>
+            <CardHeader className="px-0 flex flex-col items-center">
+              <div className="w-24 h-24 mb-4">
+                <LeLoLogo />
+              </div>
+              <CardTitle className="text-2xl text-white text-center">Sign in</CardTitle>
+              <p className="text-sm text-white/60 mt-2 text-center">
+                Access your account by signing in with Discord.
+              </p>
+            </CardHeader>
+
+            <CardFooter className="px-0 pt-6 flex flex-col gap-4">
+              <Button
+                onClick={handleDiscordLogin}
+                disabled={loading}
+                className="w-full bg-black text-white border border-white hover:bg-black/90 rounded-lg flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <span className="loader-dots relative w-6 h-4 flex items-center justify-between">
+                    <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-0"></span>
+                    <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-150"></span>
+                    <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-300"></span>
+                  </span>
+                ) : (
+                  <>
+                    <FaDiscord className="w-5 h-5" />
+                    Continue with Discord
+                  </>
+                )}
+              </Button>
+
+              <p className="text-xs text-white/60 text-center">
+                Don't have an account yet?{" "}
+                <span
+                  className="text-white underline cursor-pointer"
+                  onClick={() => {
+                    setShowLoginModal(false)
+                    setStep("login")
+                  }}
+                >
+                  Sign up
+                </span>
+              </p>
+            </CardFooter>
+
+            <style jsx>{`
+              .loader-dots span { display: inline-block; }
+              .animate-bounce { animation: bounce 0.6s infinite ease-in-out; }
+              .delay-0 { animation-delay: 0s; }
+              .delay-150 { animation-delay: 0.15s; }
+              .delay-300 { animation-delay: 0.3s; }
+              @keyframes bounce {
+                0%, 80%, 100% { transform: scale(0); }
+                40% { transform: scale(1); }
+              }
+            `}</style>
+          </Card>
         </div>
-        <CardTitle className="text-2xl text-white">Sign in</CardTitle>
-        <p className="text-sm text-white/60 mt-2">
-          Access your account by signing in with Discord. And get back to learning!
-        </p>
-      </CardHeader>
-
-      <CardFooter className="px-0 pt-6 flex flex-col gap-4">
-        <Button
-          onClick={handleDiscordLogin}
-          disabled={loading}
-          className="w-full bg-black text-white border border-white hover:bg-black/90 rounded-lg flex items-center justify-center gap-2"
-        >
-          {loading ? (
-            <span className="loader-dots relative w-6 h-4 flex items-center justify-between">
-              <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-0"></span>
-              <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-150"></span>
-              <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-300"></span>
-            </span>
-          ) : (
-            <>
-              <FaDiscord className="w-5 h-5" />
-              Continue with Discord
-            </>
-          )}
-        </Button>
-
-        <p className="text-xs text-white/60 text-center">
-          Don't have an account yet?{" "}
-          <span
-            className="text-white underline cursor-pointer"
-            onClick={() => {
-              setStep("login");
-              setShowLoginModal(false);
-            }}
-          >
-            Sign up
-          </span>
-        </p>
-      </CardFooter>
-
-      <style jsx>{`
-        .loader-dots span { display: inline-block; }
-        .animate-bounce { animation: bounce 0.6s infinite ease-in-out; }
-        .delay-0 { animation-delay: 0s; }
-        .delay-150 { animation-delay: 0.15s; }
-        .delay-300 { animation-delay: 0.3s; }
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
-        }
-      `}</style>
-      
-    </Card>
-  </div>
-)}
-
+      )}
     </>
   )
 }
