@@ -82,19 +82,27 @@ export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
 
   // After page load, check if logged-in user has application
   useEffect(() => {
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+  const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      // Check if the user has an application
+      const { data: application, error } = await supabase
+        .from("applications")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .limit(1)
+        .single()
 
-      const hasApplication = await checkApplication()
-      if (hasApplication) {
-        onClose?.() // skip onboarding
+      if (!application) {
+        setStep("name") // trigger onboarding
       } else {
-        setStep("name") // start onboarding
+        onClose?.() // skip onboarding
       }
     }
-    init()
-  }, [])
+  })
+
+  return () => listener.subscription.unsubscribe()
+}, [])
+
 
   // Handle final submission
   const submitApplication = async () => {
