@@ -30,3 +30,5 @@ Caused by:
     0: Unable to open static sorted file 00000048.sst
     1: The system cannot find the file specified. (os error 2)
 Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)

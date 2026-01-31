@@ -317,3 +317,35 @@ export async function getCourseStats(courseId: string) {
     completionRate: enrollments ? Math.round((completions! / enrollments) * 100) : 0
   }
 }
+
+export function getCourseChapters(courseId: string) {
+  return supabase
+    .from("course_chapters")
+    .select("*")
+    .eq("course_id", courseId)
+}
+
+export function createCourseChapter(data: {
+  course_id: string
+  title: string
+  order_index: number
+}) {
+  return supabase.from("course_chapters").insert(data)
+}
+
+export function updateCourseChapter(id: string, data: {
+  title: string
+  order_index: number
+}) {
+  return supabase
+    .from("course_chapters")
+    .update(data)
+    .eq("id", id)
+}
+
+export function deleteCourseChapter(id: string) {
+  return supabase
+    .from("course_chapters")
+    .delete()
+    .eq("id", id)
+}

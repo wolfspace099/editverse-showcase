@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { GeistSans } from "geist/font/sans"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { 
+import {
   Plus,
   Edit2,
   Trash2,
@@ -15,8 +15,7 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
-  Play,
-  Type
+  Play
 } from "lucide-react"
 import {
   getAllCoursesAdmin,
@@ -27,11 +26,21 @@ import {
   getCourseLessons,
   createLesson,
   updateLesson,
-  deleteLesson
+  deleteLesson,
+  getCourseChapters,
+  createCourseChapter,
+  updateCourseChapter,
+  deleteCourseChapter
 } from "@/lib/supabaseApi"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 import { useRouter, notFound } from "next/navigation"
 import { BadgeCheck } from "lucide-react"
+
+type Chapter = {
+  id: string
+  title: string
+  order_index: number
+}
 
 type Lesson = {
   id: string
@@ -40,6 +49,7 @@ type Lesson = {
   video_url: string
   duration_minutes: number
   order_index: number
+  chapter_id: string | null
 }
 
 type Course = {
@@ -64,7 +74,7 @@ type CourseStats = {
 export default function AdminDashboard() {
   const router = useRouter()
   const supabase = getSupabaseClient()
-  
+
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -74,18 +84,27 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
   const [checking, setChecking] = useState(true)
 
-  // Lesson Management State
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+
+  const [chapters, setChapters] = useState<Chapter[]>([])
+  const [editingChapterId, setEditingChapterId] = useState<string | null>(null)
+  const [chapterForm, setChapterForm] = useState({
+    title: "",
+    order_index: 0
+  })
+
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [lessonLoading, setLessonLoading] = useState(false)
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
   const [isCreatingLesson, setIsCreatingLesson] = useState(false)
+
   const [lessonFormData, setLessonFormData] = useState({
     title: "",
     description: "",
     video_url: "",
     duration_minutes: 0,
-    order_index: 0
+    order_index: 0,
+    chapter_id: null as string | null
   })
 
   const [formData, setFormData] = useState({
@@ -94,40 +113,45 @@ export default function AdminDashboard() {
     category: "Editing course",
     image_url: "",
     difficulty: "Beginner",
-    duration_minutes: 0,
+    duration_minutes: 0
   })
 
-  // Check auth
+  const handleLogout = async () => {
+    localStorage.removeItem("fake_user")
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
+
   useEffect(() => {
     async function checkAuth() {
       setChecking(true)
-      const fakeUser = localStorage.getItem('fake_user')
+
+      const fakeUser = localStorage.getItem("fake_user")
       if (fakeUser) {
         try {
           const parsed = JSON.parse(fakeUser)
           setUserId(parsed.id)
-          setIsAdmin(false) // Fake users are never database admins
+          setIsAdmin(false)
           setChecking(false)
-          notFound() // Return 404 for fake users in admin panel
+          notFound()
           return
-        } catch (e) {
-          localStorage.removeItem('fake_user')
+        } catch {
+          localStorage.removeItem("fake_user")
         }
       }
 
       const { data: { session } } = await supabase.auth.getSession()
+
       if (!session) {
         setChecking(false)
-        router.push('/login')
+        router.push("/login")
         return
       }
-      
-      // Check for admin role in JWT
+
       const role = session.user.app_metadata?.role || (session.user as any).role
-      
-      if (role !== 'admin') {
+      if (role !== "admin") {
         setChecking(false)
-        notFound() // Trigger 404 if not admin
+        notFound()
         return
       }
 
@@ -136,42 +160,44 @@ export default function AdminDashboard() {
       setChecking(false)
       loadCourses()
     }
-    
+
     checkAuth()
   }, [])
 
   async function loadCourses() {
     setLoading(true)
     const { data } = await getAllCoursesAdmin()
-    
+
     if (data) {
       setCourses(data)
-      const statsPromises = data.map(course => 
-        getCourseStats(course.id).then(stats => ({ id: course.id, stats }))
+
+      const statsPromises = data.map((course) =>
+        getCourseStats(course.id).then((stats) => ({ id: course.id, stats }))
       )
       const statsResults = await Promise.all(statsPromises)
       const statsMap = statsResults.reduce((acc, { id, stats }) => {
         acc[id] = stats
         return acc
       }, {} as Record<string, CourseStats>)
+
       setStats(statsMap)
     }
+
     setLoading(false)
   }
 
-  const handleLogout = async () => {
-    localStorage.removeItem('fake_user')
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
-  // Lesson Functions
   async function loadLessons(courseId: string) {
     setLessonLoading(true)
     const { data } = await getCourseLessons(courseId)
+    const { data: chapterData } = await getCourseChapters(courseId)
+
     if (data) {
-      setLessons(data.sort((a: Lesson, b: Lesson) => a.order_index - b.order_index))
+      setLessons(data.sort((a, b) => a.order_index - b.order_index))
     }
+    if (chapterData) {
+      setChapters(chapterData.sort((a, b) => a.order_index - b.order_index))
+    }
+
     setLessonLoading(false)
   }
 
@@ -179,6 +205,7 @@ export default function AdminDashboard() {
     if (selectedCourseId === courseId) {
       setSelectedCourseId(null)
       setLessons([])
+      setChapters([])
     } else {
       setSelectedCourseId(courseId)
       loadLessons(courseId)
@@ -193,7 +220,8 @@ export default function AdminDashboard() {
       description: lesson.description || "",
       video_url: lesson.video_url || "",
       duration_minutes: lesson.duration_minutes || 0,
-      order_index: lesson.order_index
+      order_index: lesson.order_index,
+      chapter_id: lesson.chapter_id
     })
   }
 
@@ -205,17 +233,9 @@ export default function AdminDashboard() {
     }
 
     if (isCreatingLesson) {
-      const { error } = await createLesson({
-        ...lessonFormData,
-        course_id: selectedCourseId
-      })
-      if (error) {
-        console.error("RLS Error Detail:", error)
-        alert("Error creating lesson: " + error.message + ". This is often a Supabase RLS policy issue.")
-      }
+      await createLesson({ ...lessonFormData, course_id: selectedCourseId })
     } else if (editingLessonId) {
-      const { error } = await updateLesson(editingLessonId, lessonFormData)
-      if (error) alert("Error updating lesson: " + error.message)
+      await updateLesson(editingLessonId, lessonFormData)
     }
 
     setEditingLessonId(null)
@@ -224,13 +244,32 @@ export default function AdminDashboard() {
   }
 
   async function handleDeleteLesson(lessonId: string) {
-    if (!confirm("Are you sure you want to delete this lesson?")) return
-    const { error } = await deleteLesson(lessonId)
-    if (error) alert("Error deleting lesson: " + error.message)
-    else if (selectedCourseId) loadLessons(selectedCourseId)
+    if (!confirm("Delete lesson?")) return
+    await deleteLesson(lessonId)
+    if (selectedCourseId) loadLessons(selectedCourseId)
   }
 
-  // Course Functions
+  async function handleSaveChapter() {
+    if (!selectedCourseId) return
+    if (!chapterForm.title) return
+
+    if (editingChapterId) {
+      await updateCourseChapter(editingChapterId, chapterForm)
+    } else {
+      await createCourseChapter({ ...chapterForm, course_id: selectedCourseId })
+    }
+
+    setEditingChapterId(null)
+    setChapterForm({ title: "", order_index: 0 })
+    loadLessons(selectedCourseId)
+  }
+
+  async function handleDeleteChapter(id: string) {
+    if (!confirm("Delete chapter? Lessons will become unassigned.")) return
+    await deleteCourseChapter(id)
+    if (selectedCourseId) loadLessons(selectedCourseId)
+  }
+
   function handleEdit(course: Course) {
     setEditingId(course.id)
     setFormData({
@@ -239,7 +278,7 @@ export default function AdminDashboard() {
       category: course.category,
       image_url: course.image_url,
       difficulty: course.difficulty,
-      duration_minutes: course.duration_minutes,
+      duration_minutes: course.duration_minutes
     })
   }
 
@@ -256,59 +295,44 @@ export default function AdminDashboard() {
       category: "Editing course",
       image_url: "",
       difficulty: "Beginner",
-      duration_minutes: 0,
+      duration_minutes: 0
     })
   }
 
   async function handleSave() {
-    if (!formData.title || !formData.description) {
-      alert("Please fill in all required fields")
-      return
-    }
-
+    if (!formData.title || !formData.description) return
     if (isCreating) {
-      const { error } = await createCourse(formData)
-      if (error) {
-        alert("Error creating course: " + error.message)
-        return
-      }
+      await createCourse(formData)
     } else if (editingId) {
-      const { error } = await updateCourse(editingId, formData)
-      if (error) {
-        alert("Error updating course: " + error.message)
-        return
-      }
+      await updateCourse(editingId, formData)
     }
-
     handleCancelEdit()
     loadCourses()
   }
 
   async function handleDelete(courseId: string) {
-    if (!confirm("Are you sure you want to delete this course?")) return
-    const { error } = await deleteCourse(courseId)
-    if (error) {
-      alert("Error deleting course: " + error.message)
-      return
-    }
+    if (!confirm("Delete course?")) return
+    await deleteCourse(courseId)
     loadCourses()
   }
 
   const totalEnrollments = Object.values(stats).reduce((sum, s) => sum + s.enrollments, 0)
-  const avgCompletionRate = stats && Object.keys(stats).length > 0
-    ? Math.round(Object.values(stats).reduce((sum, s) => sum + s.completionRate, 0) / Object.keys(stats).length)
-    : 0
+  const avgCompletionRate =
+    stats && Object.keys(stats).length > 0
+      ? Math.round(Object.values(stats).reduce((sum, s) => sum + s.completionRate, 0) / Object.keys(stats).length)
+      : 0
 
   if ((loading || checking) && !userId) {
     return (
       <div className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center`}>
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white"></div>
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white" />
       </div>
     )
   }
 
   return (
     <div className={`${GeistSans.className} min-h-screen bg-black text-white`}>
+      {/* header */}
       <header className="border-b border-white/10 bg-black/50 backdrop-blur-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -322,52 +346,34 @@ export default function AdminDashboard() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                onClick={() => router.push('/dashboard')}
-                variant="outline"
-                size="sm"
-              >
-                Back to Dashboard
-              </Button>
-              <Button
-                onClick={handleLogout}
-                variant="ghost"
-                size="sm"
-                className="text-white/60 hover:text-white"
-              >
-                Sign Out
-              </Button>
+              <Button onClick={() => router.push("/dashboard")} variant="outline" size="sm">Back to Dashboard</Button>
+              <Button onClick={handleLogout} variant="ghost" size="sm" className="text-white/60 hover:text-white">Sign Out</Button>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <StatCard icon={BookOpen} label="Total Courses" value={courses.length} />
           <StatCard icon={Users} label="Total Enrollments" value={totalEnrollments} />
           <StatCard icon={TrendingUp} label="Avg Completion Rate" value={`${avgCompletionRate}%`} />
         </div>
 
+        {/* create course */}
         <div className="mb-6">
-          <Button
-            onClick={() => {
-              setIsCreating(true)
-              resetForm()
-            }}
-            className="bg-white text-black hover:bg-white/90"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create New Course
+          <Button onClick={() => { setIsCreating(true); resetForm() }} className="bg-white text-black hover:bg-white/90">
+            <Plus className="mr-2 h-4 w-4" /> Create New Course
           </Button>
         </div>
 
+        {/* course form */}
         {(isCreating || editingId) && (
           <div className="mb-8 p-6 border border-white/10 rounded-lg bg-white/5">
-            <h3 className="text-lg font-semibold mb-4">
-              {isCreating ? "Create New Course" : "Edit Course"}
-            </h3>
+            <h3 className="text-lg font-semibold mb-4">{isCreating ? "Create New Course" : "Edit Course"}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* form inputs */}
               <div>
                 <label className="block text-sm text-white/70 mb-2">Title *</label>
                 <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Course title" className="bg-black border-white/10" />
@@ -409,6 +415,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* courses list */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">All Courses</h3>
           {loading ? (
@@ -429,116 +436,145 @@ export default function AdminDashboard() {
                     onManageLessons={() => handleManageLessons(course.id)}
                     isManagingLessons={selectedCourseId === course.id}
                   />
-                  
+
                   {selectedCourseId === course.id && (
                     <div className="ml-8 p-6 border border-white/5 rounded-lg bg-white/[0.02] space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-white/90">Lessons Management</h4>
-                        <Button 
-                          size="sm" 
-                          onClick={() => {
-                            setIsCreatingLesson(true)
-                            setEditingLessonId(null)
-                            setLessonFormData({
-                              title: "",
-                              description: "",
-                              video_url: "",
-                              duration_minutes: 0,
-                              order_index: lessons.length
-                            })
-                          }}
-                        >
-                          <Plus className="mr-2 h-4 w-4" /> Add Lesson
-                        </Button>
-                      </div>
-
-                      {(isCreatingLesson || editingLessonId) && (
-                        <div className="p-4 border border-white/10 rounded bg-black/40 space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
-                              <label className="text-xs text-white/50 mb-1 block">Lesson Title</label>
-                              <Input 
-                                value={lessonFormData.title} 
-                                onChange={(e) => setLessonFormData({...lessonFormData, title: e.target.value})}
-                                className="bg-black border-white/10 h-9"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-white/50 mb-1 block">Video URL (or path)</label>
-                              <Input 
-                                value={lessonFormData.video_url} 
-                                onChange={(e) => setLessonFormData({...lessonFormData, video_url: e.target.value})}
-                                className="bg-black border-white/10 h-9"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-xs text-white/50 mb-1 block">Duration (min)</label>
-                                <Input 
-                                  type="number" 
-                                  value={lessonFormData.duration_minutes} 
-                                  onChange={(e) => setLessonFormData({...lessonFormData, duration_minutes: parseInt(e.target.value) || 0})}
-                                  className="bg-black border-white/10 h-9"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-white/50 mb-1 block">Order Index</label>
-                                <Input 
-                                  type="number" 
-                                  value={lessonFormData.order_index} 
-                                  onChange={(e) => setLessonFormData({...lessonFormData, order_index: parseInt(e.target.value) || 0})}
-                                  className="bg-black border-white/10 h-9"
-                                />
-                              </div>
-                            </div>
-                            <div className="md:col-span-2">
-                              <label className="text-xs text-white/50 mb-1 block">Description</label>
-                              <textarea 
-                                value={lessonFormData.description} 
-                                onChange={(e) => setLessonFormData({...lessonFormData, description: e.target.value})}
-                                className="w-full bg-black border border-white/10 rounded px-3 py-2 text-sm text-white resize-none"
-                                rows={3}
-                              />
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={handleSaveLesson}><Save className="h-4 w-4 mr-2" /> Save Lesson</Button>
-                            <Button size="sm" variant="ghost" onClick={() => {setIsCreatingLesson(false); setEditingLessonId(null)}}><X className="h-4 w-4 mr-2" /> Cancel</Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {lessonLoading ? (
-                        <div className="py-4 text-center text-white/40">Loading lessons...</div>
-                      ) : lessons.length === 0 ? (
-                        <div className="py-4 text-center text-white/40">No lessons in this course.</div>
-                      ) : (
+                      {/* lessons and chapters management */}
+                      <div className="flex flex-col gap-4">
+                        {/* Chapters */}
                         <div className="space-y-2">
-                          {lessons.map((lesson) => (
-                            <div key={lesson.id} className="flex items-center justify-between p-3 border border-white/5 rounded bg-white/[0.01] hover:bg-white/[0.03] transition group">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded bg-white/5 flex items-center justify-center text-xs text-white/40 font-mono">
-                                  {lesson.order_index + 1}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">{lesson.title}</p>
-                                  <p className="text-xs text-white/40 flex items-center gap-2">
-                                    <Play className="h-3 w-3" /> {lesson.duration_minutes} min
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => handleEditLesson(lesson)}>
+                          <p className="text-xs uppercase tracking-wider text-white/40">Chapters</p>
+                          {chapters.map((chapter) => (
+                            <div key={chapter.id} className="flex items-center justify-between px-3 py-2 rounded border border-white/10">
+                              <div className="text-sm">{chapter.order_index + 1}. {chapter.title}</div>
+                              <div className="flex gap-1">
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingChapterId(chapter.id); setChapterForm({ title: chapter.title, order_index: chapter.order_index }) }}>
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-red-400" onClick={() => handleDeleteLesson(lesson.id)}>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-red-400" onClick={() => handleDeleteChapter(chapter.id)}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
                           ))}
+
+                          {/* Add/edit chapter */}
+                          <div className="grid grid-cols-3 gap-2 pt-2">
+                            <Input placeholder="Chapter title"
+                              value={chapterForm.title}
+                              onChange={(e) => setChapterForm({ ...chapterForm, title: e.target.value })}
+                              className="bg-black border-white/10"
+                            />
+                            <Input
+                              type="number"
+                              value={chapterForm.order_index}
+                              onChange={(e) => setChapterForm({ ...chapterForm, order_index: parseInt(e.target.value) || 0 })}
+                              className="bg-black border-white/10"
+                            />
+                            <Button size="sm" onClick={handleSaveChapter}>
+                              <Save className="h-4 w-4 mr-2" /> Save
+                            </Button>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setIsCreatingLesson(true)
+                              setEditingLessonId(null)
+                              setLessonFormData({
+                                title: "",
+                                description: "",
+                                video_url: "",
+                                duration_minutes: 0,
+                                order_index: lessons.length,
+                                chapter_id: null,
+                              })
+                            }}
+                            className="mt-2"
+                          >
+                            <Plus className="mr-2 h-4 w-4" /> Add Lesson
+                          </Button>
                         </div>
-                      )}
+
+                        {/* Lesson Form */}
+                        {(isCreatingLesson || editingLessonId) && (
+                          <div className="p-4 border border-white/10 rounded bg-black/40 space-y-4">
+                            <Input
+                              placeholder="Lesson title"
+                              value={lessonFormData.title}
+                              onChange={(e) => setLessonFormData({ ...lessonFormData, title: e.target.value })}
+                              className="bg-black border-white/10"
+                            />
+                            <textarea
+                              placeholder="Lesson description"
+                              value={lessonFormData.description}
+                              onChange={(e) => setLessonFormData({ ...lessonFormData, description: e.target.value })}
+                              rows={3}
+                              className="w-full px-3 py-2 rounded-md bg-black border border-white/10 text-white resize-none"
+                            />
+                            <Input
+                              placeholder="Video URL"
+                              value={lessonFormData.video_url}
+                              onChange={(e) => setLessonFormData({ ...lessonFormData, video_url: e.target.value })}
+                              className="bg-black border-white/10"
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Duration in minutes"
+                              value={lessonFormData.duration_minutes}
+                              onChange={(e) => setLessonFormData({ ...lessonFormData, duration_minutes: parseInt(e.target.value) || 0 })}
+                              className="bg-black border-white/10"
+                            />
+                            <div className="flex gap-2">
+                              <Button onClick={handleSaveLesson}>
+                                <Save className="h-4 w-4 mr-2" /> Save
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setIsCreatingLesson(false)
+                                  setEditingLessonId(null)
+                                }}
+                              >
+                                <X className="h-4 w-4 mr-2" /> Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Lessons list */}
+                        {lessonLoading ? (
+                          <div className="py-4 text-center text-white/40">Loading lessons...</div>
+                        ) : lessons.length === 0 ? (
+                          <div className="py-4 text-center text-white/40">No lessons in this course.</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {lessons.map((lesson) => (
+                              <div key={lesson.id} className="flex items-center justify-between p-3 border border-white/5 rounded bg-white/[0.01] hover:bg-white/[0.03] transition group">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded bg-white/5 flex items-center justify-center text-xs text-white/40 font-mono">
+                                    {lesson.order_index + 1}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">{lesson.title}</p>
+                                    <p className="text-xs text-white/40 flex items-center gap-2">
+                                      <Play className="h-3 w-3" /> {lesson.duration_minutes} min
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => handleEditLesson(lesson)}>
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-red-400" onClick={() => handleDeleteLesson(lesson.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -551,7 +587,7 @@ export default function AdminDashboard() {
   )
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: any, label: string, value: string | number }) {
+function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: string | number }) {
   return (
     <div className="p-6 border border-white/10 rounded-lg bg-white/5">
       <div className="flex items-center gap-3 mb-2">
@@ -563,12 +599,19 @@ function StatCard({ icon: Icon, label, value }: { icon: any, label: string, valu
   )
 }
 
-function CourseAdminCard({ course, stats, onEdit, onDelete, onManageLessons, isManagingLessons }: { 
-  course: Course, 
-  stats?: CourseStats, 
-  onEdit: () => void, 
-  onDelete: () => void,
-  onManageLessons: () => void,
+function CourseAdminCard({
+  course,
+  stats,
+  onEdit,
+  onDelete,
+  onManageLessons,
+  isManagingLessons
+}: {
+  course: Course
+  stats?: CourseStats
+  onEdit: () => void
+  onDelete: () => void
+  onManageLessons: () => void
   isManagingLessons: boolean
 }) {
   return (
@@ -587,22 +630,38 @@ function CourseAdminCard({ course, stats, onEdit, onDelete, onManageLessons, isM
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="icon" variant="ghost" onClick={onEdit} className="text-white/40 hover:text-white"><Edit2 className="h-4 w-4" /></Button>
-              <Button size="icon" variant="ghost" onClick={onDelete} className="text-white/40 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" onClick={onEdit} className="text-white/40 hover:text-white">
+                <Edit2 className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={onDelete} className="text-white/40 hover:text-red-400">
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-            <div><p className="text-[10px] uppercase tracking-wider text-white/30 mb-0.5">Lessons</p><p className="text-sm font-medium">{course.lessons_count}</p></div>
-            <div><p className="text-[10px] uppercase tracking-wider text-white/30 mb-0.5">Duration</p><p className="text-sm font-medium">{course.duration_minutes}m</p></div>
-            <div><p className="text-[10px] uppercase tracking-wider text-white/30 mb-0.5">Enrolled</p><p className="text-sm font-medium">{stats?.enrollments || 0}</p></div>
-            <div><p className="text-[10px] uppercase tracking-wider text-white/30 mb-0.5">Completion</p><p className="text-sm font-medium">{stats?.completionRate || 0}%</p></div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-white/30 mb-0.5">Lessons</p>
+              <p className="text-sm font-medium">{course.lessons_count}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-white/30 mb-0.5">Duration</p>
+              <p className="text-sm font-medium">{course.duration_minutes}m</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-white/30 mb-0.5">Enrolled</p>
+              <p className="text-sm font-medium">{stats?.enrollments || 0}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-white/30 mb-0.5">Completion</p>
+              <p className="text-sm font-medium">{stats?.completionRate || 0}%</p>
+            </div>
           </div>
           <div className="mt-6">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onManageLessons}
-              className={`border-white/10 hover:bg-white/5 ${isManagingLessons ? 'bg-white/10 border-white/20' : ''}`}
+              className={`border-white/10 hover:bg-white/5 ${isManagingLessons ? "bg-white/10 border-white/20" : ""}`}
             >
               {isManagingLessons ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
               Manage Lessons

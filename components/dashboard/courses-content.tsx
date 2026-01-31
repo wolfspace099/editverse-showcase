@@ -160,7 +160,7 @@ export default function CoursesContent({ userId }: { userId: string }) {
 function ContinueLearningCard({ course, progress, lastAccessed }: { course: Course; progress: number; lastAccessed: string }) {
   const timeAgo = formatTimeAgo(lastAccessed)
   return (
-    <Link href={`/dashboard/?page=courses&course=${course.id}`} className="group border border-white/10 rounded-xl bg-black hover:border-white/20 transition-colors overflow-hidden">
+    <Link href={`/dashboard/courses/${course.id}`} className="group border border-white/10 rounded-xl bg-black hover:border-white/20 transition-colors overflow-hidden">
       <div className="aspect-[16/9] w-full bg-white/5 relative">
         <img src={course.image_url} alt={course.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -187,7 +187,7 @@ function ContinueLearningCard({ course, progress, lastAccessed }: { course: Cour
 }
 
 function CourseCard({ course, viewMode }: { course: Course; viewMode: "grid" | "list" }) {
-  const link = `/dashboard/?page=courses&course=${course.id}`
+  const link = `/dashboard/courses/${course.id}`
 
   if (viewMode === "list") {
     return (

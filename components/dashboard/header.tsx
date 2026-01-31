@@ -192,24 +192,22 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
   const handleNavClick = (view: string) => {
     setActiveTab(view)
     setMobileMenuOpen(false)
-    
+
     if (onViewChange) {
       onViewChange(view)
     }
-    
-    // Check for existing course ID in URL
-    const searchParams = new URLSearchParams(window.location.search)
-    const courseId = searchParams.get('course')
-    const query = courseId ? `?course=${courseId}` : ''
-    
+
     if (view === 'overview') {
-      router.push(`/dashboard?page=overview${courseId ? `&course=${courseId}` : ''}`)
-    } else if (view === 'courses') {
-      // Navigate to the dedicated courses page
-      router.push('/dashboard/courses')
-    } else {
-      router.push(`/dashboard?page=${view}${query}`)
+      router.push('/dashboard?page=overview')
+      return
     }
+
+    if (view === 'courses') {
+      router.push('/dashboard/courses')
+      return
+    }
+
+    router.push(`/dashboard?page=${view}`)
   }
 
   const searchSuggestions = [

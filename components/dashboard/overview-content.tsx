@@ -403,7 +403,7 @@ function CourseCard({
 
   return (
     <Link
-      href={`/dashboard?course=${course.id}`}
+      href={`/dashboard/courses/${course.id}`}
       className={`group border border-white/10 rounded-xl bg-black hover:border-white/20 transition-colors overflow-hidden ${
         isListView ? 'flex flex-col sm:flex-row' : ''
       }`}
