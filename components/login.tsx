@@ -1,11 +1,10 @@
 "use client"
 
 import { FC, useState } from "react"
-import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
 import { LeLoLogo } from "./lelo-logo"
-import { FaDiscord } from "react-icons/fa"
+import { X } from "lucide-react"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 
 interface DiscordLoginPopupProps {
@@ -14,175 +13,98 @@ interface DiscordLoginPopupProps {
 
 export const DiscordLoginPopup: FC<DiscordLoginPopupProps> = ({ onClose }) => {
   const supabase = getSupabaseClient()
+  
   const [loading, setLoading] = useState(false)
-  const [showLoginModal, setShowLoginModal] = useState(false)
 
   const handleDiscordLogin = async () => {
-  setLoading(true)
-  try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'discord',
-  })
-    if (error) {
-      console.error('Error during Discord login:', error.message)
+    setLoading(true)
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: "discord",
+        options: { redirectTo: window.location.origin },
+      })
+      // OAuth redirect will happen automatically
+    } catch (err) {
+      console.error(err)
+      setLoading(false)
     }
-  } catch (error) {
-    console.error('Unexpected error during Discord login:', error)
-  } finally {
-    setLoading(false)
   }
-}
-
-
-  const Loader = () => (
-    <span className="loader-dots relative w-6 h-4 flex items-center justify-between">
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-0" />
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-150" />
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-300" />
-    </span>
-  )
 
   return (
-    <>
-      {/* Main popup */}
-      {!showLoginModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <Card
+        className="w-full max-w-sm rounded-2xl shadow-2xl border border-white/10 overflow-hidden bg-black relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
           onClick={onClose}
+          className="absolute top-3 right-3 text-white/60 hover:text-white transition-colors"
         >
-          <Card
-            className="relative w-full max-w-4xl min-h-[480px] grid grid-cols-2 rounded-2xl shadow-2xl border border-white/10 bg-black overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+          <X className="w-5 h-5" />
+        </button>
+
+        <CardHeader className="flex flex-col items-center gap-2 pt-6">
+          <div className="w-16 h-16">
+            <LeLoLogo />
+          </div>
+          <CardTitle className="text-lg text-white">Login with Discord</CardTitle>
+        </CardHeader>
+
+        <CardContent className="text-center text-white/80">
+          <p className="text-sm">
+            Click the button below to login with your Discord account.
+          </p>
+        </CardContent>
+
+        <CardFooter className="px-6 pb-6">
+          <Button
+            onClick={handleDiscordLogin}
+            disabled={loading}
+            className="w-full bg-black text-white border border-white hover:bg-black/90 transition-all rounded-lg font-medium py-2 flex items-center justify-center gap-2"
           >
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors z-10"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {loading ? (
+              <span className="loader-dots relative w-6 h-4 flex items-center justify-between">
+                <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-0"></span>
+                <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-150"></span>
+                <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-300"></span>
+              </span>
+            ) : (
+              "Login with Discord"
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
 
-            {/* Left column: content */}
-            <div className="flex flex-col justify-center px-12">
-              <CardHeader className="px-0">
-                <div className="w-32 h-24 mb-4">
-                  <LeLoLogo size={96} />
-                </div>
-                <CardTitle className="text-2xl text-white">Welcome</CardTitle>
-                <p className="text-sm text-white/60 mt-2">
-                  Log in to start your onboarding and request access to our assets and courses.
-                </p>
-              </CardHeader>
-
-              <CardFooter className="px-0 pt-6 flex flex-col gap-4">
-                <Button
-                  onClick={handleDiscordLogin}
-                  disabled={loading}
-                  className="w-full bg-black text-white border border-white hover:bg-white hover:text-black rounded-lg flex items-center justify-center gap-2 transition-colors duration-200"
-                >
-                  {loading ? <Loader /> : (
-                    <>
-                      <FaDiscord className="w-5 h-5" />
-                      Continue with Discord
-                    </>
-                  )}
-                </Button>
-
-                <p className="text-xs text-white/60 text-center">
-                  Already have an account?{" "}
-                  <span
-                    className="text-white underline cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowLoginModal(true)
-                    }}
-                  >
-                    Sign in
-                  </span>
-                </p>
-              </CardFooter>
-            </div>
-
-            {/* Right column: visual */}
-            <div className="relative hidden md:block pointer-events-none">
-              <img
-                src="/images/login-visual.jpg"
-                alt="Visual"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/40" />
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Login modal */}
-      {showLoginModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-lg"
-          onClick={() => setShowLoginModal(false)}
-        >
-          <Card
-            className="relative w-full max-w-md p-8 rounded-2xl shadow-2xl border border-white/10 bg-black"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowLoginModal(false)}
-              className="absolute top-4 right-4 text-white/60 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <CardHeader className="px-0">
-              <div className="w-32 h-16 mb-4">
-                <LeLoLogo size={70} />
-              </div>
-              <CardTitle className="text-2xl text-white">Sign in</CardTitle>
-              <p className="text-sm text-white/60 mt-2">
-                Access your account to continue.
-              </p>
-            </CardHeader>
-
-            <CardFooter className="px-0 pt-6 flex flex-col gap-4">
-              <Button
-                onClick={handleDiscordLogin}
-                disabled={loading}
-                className="w-full bg-black text-white border border-white hover:bg-white hover:text-black rounded-lg flex items-center justify-center gap-2 transition-colors duration-200"
-              >
-                {loading ? <Loader /> : (
-                  <>
-                    <FaDiscord className="w-5 h-5" />
-                    Continue with Discord
-                  </>
-                )}
-              </Button>
-
-              <p className="text-xs text-white/60 text-center">
-                Don't have an account yet?{" "}
-                <span
-                  className="text-white underline cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowLoginModal(false)
-                  }}
-                >
-                  Sign up
-                </span>
-              </p>
-            </CardFooter>
-          </Card>
-        </div>
-      )}
-
+      {/* Loader animation styles */}
       <style jsx>{`
-        .animate-bounce { animation: bounce 0.6s infinite ease-in-out; }
-        .delay-0 { animation-delay: 0s; }
-        .delay-150 { animation-delay: 0.15s; }
-        .delay-300 { animation-delay: 0.3s; }
+        .loader-dots span {
+          display: inline-block;
+        }
+        .animate-bounce {
+          animation: bounce 0.6s infinite ease-in-out;
+        }
+        .delay-0 {
+          animation-delay: 0s;
+        }
+        .delay-150 {
+          animation-delay: 0.15s;
+        }
+        .delay-300 {
+          animation-delay: 0.3s;
+        }
         @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
+          0%, 80%, 100% {
+            transform: scale(0);
+          }
+          40% {
+            transform: scale(1);
+          }
         }
       `}</style>
-    </>
+    </div>
   )
 }
