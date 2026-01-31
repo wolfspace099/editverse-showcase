@@ -89,8 +89,13 @@ CREATE POLICY "Anyone can view published courses" ON courses
   FOR SELECT USING (is_published = true);
 
 -- Admin full access (you'll need to set up admin role)
+-- To grant admin role: 
+-- UPDATE auth.users SET raw_app_metadata_content = jsonb_set(COALESCE(raw_app_metadata_content, '{}'::jsonb), '{role}', '"admin"') WHERE email = 'your-email@example.com';
 CREATE POLICY "Admins have full access to courses" ON courses
   FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "Authenticated users can view all courses" ON courses
+  FOR SELECT TO authenticated USING (true);
 
 -- Public read access for lessons of published courses
 CREATE POLICY "Anyone can view lessons of published courses" ON lessons
@@ -102,12 +107,24 @@ CREATE POLICY "Anyone can view lessons of published courses" ON lessons
     )
   );
 
+-- Admin full access to lessons
+CREATE POLICY "Admins have full access to lessons" ON lessons
+  FOR ALL TO authenticated
+  USING (auth.jwt() ->> 'role' = 'admin')
+  WITH CHECK (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "Authenticated users can view all lessons" ON lessons
+  FOR SELECT TO authenticated USING (true);
+
 -- Users can only see and modify their own progress
 CREATE POLICY "Users can view own progress" ON user_progress
   FOR SELECT USING (auth.uid()::text = user_id::text);
 
 CREATE POLICY "Users can insert own progress" ON user_progress
   FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Admins can view all progress" ON user_progress
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
 
 CREATE POLICY "Users can update own progress" ON user_progress
   FOR UPDATE USING (auth.uid()::text = user_id::text);
@@ -119,12 +136,18 @@ CREATE POLICY "Users can view own lesson completions" ON lesson_completions
 CREATE POLICY "Users can insert own lesson completions" ON lesson_completions
   FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
 
+CREATE POLICY "Admins can view all lesson completions" ON lesson_completions
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
+
 -- Users can only see and modify their own stats
 CREATE POLICY "Users can view own stats" ON user_stats
   FOR SELECT USING (auth.uid()::text = user_id::text);
 
 CREATE POLICY "Users can insert own stats" ON user_stats
   FOR INSERT WITH CHECK (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Admins can view all stats" ON user_stats
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
 
 CREATE POLICY "Users can update own stats" ON user_stats
   FOR UPDATE USING (auth.uid()::text = user_id::text);
@@ -161,6 +184,29 @@ CREATE TRIGGER lesson_completion_trigger
 AFTER INSERT ON lesson_completions
 FOR EACH ROW
 EXECUTE FUNCTION update_user_progress();
+
+-- Function to update course lessons count
+CREATE OR REPLACE FUNCTION update_course_lessons_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (TG_OP = 'INSERT') THEN
+    UPDATE courses 
+    SET lessons_count = lessons_count + 1 
+    WHERE id = NEW.course_id;
+  ELSIF (TG_OP = 'DELETE') THEN
+    UPDATE courses 
+    SET lessons_count = lessons_count - 1 
+    WHERE id = OLD.course_id;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update lessons count
+CREATE TRIGGER update_lessons_count_trigger
+AFTER INSERT OR DELETE ON lessons
+FOR EACH ROW
+EXECUTE FUNCTION update_course_lessons_count();
 
 -- Function to initialize user stats
 CREATE OR REPLACE FUNCTION initialize_user_stats()

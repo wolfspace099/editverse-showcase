@@ -1,0 +1,31 @@
+
+> my-v0-project@0.1.0 dev
+> next dev
+
+⚠ Port 3000 is in use by process 21112, using available port 3003 instead.
+▲ Next.js 16.2.0-canary.6 (Turbopack)
+- Local:         http://localhost:3003
+- Network:       http://192.168.68.143:3003
+- Environments: .env.local
+✓ Ready in 605ms
+
+ GET /login 200 in 2.4s (compile: 2.1s, render: 268ms)
+ GET /images/login-visual.jpg 404 in 374ms (compile: 337ms, render: 37ms)
+ GET /dashboard 200 in 439ms (compile: 421ms, render: 18ms)
+ GET /admin 200 in 398ms (compile: 330ms, render: 67ms)
+ GET /test.jpg 404 in 40ms (compile: 4ms, render: 36ms)
+ GET /login 200 in 56ms (compile: 5ms, render: 51ms)
+ GET /images/login-visual.jpg 404 in 61ms (compile: 9ms, render: 52ms)
+ GET /dashboard 200 in 28ms (compile: 6ms, render: 22ms)
+ GET /admin 200 in 42ms (compile: 3ms, render: 38ms)
+ GET /test.jpg 404 in 49ms (compile: 7ms, render: 42ms)
+ GET /login 200 in 40ms (compile: 3ms, render: 37ms)
+ GET /images/login-visual.jpg 404 in 47ms (compile: 7ms, render: 40ms)
+ GET /dashboard 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /admin 200 in 30ms (compile: 3ms, render: 27ms)
+ GET /test.jpg 404 in 31ms (compile: 5ms, render: 26ms)
+Persisting failed: Unable to open static sorted file referenced from 00000049.meta
+
+Caused by:
+    0: Unable to open static sorted file 00000048.sst
+    1: The system cannot find the file specified. (os error 2)

@@ -66,18 +66,24 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Course Player State
+  // Page state
+  const [page, setPage] = useState<string>("overview")
   const [courseId, setCourseId] = useState<string | null>(null)
+
+  // Course Player State
   const [course, setCourse] = useState<Course | null>(null)
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null)
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set())
   const [progress, setProgress] = useState(0)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
-  // Detect course from query param
+  // Detect page & course from query param
   useEffect(() => {
-    const id = searchParams?.get("course")
-    setCourseId(id)
+    const courseParam = searchParams?.get("course")
+    setCourseId(courseParam)
+    
+    const pageParam = searchParams?.get("page") || (courseParam ? "course" : "overview")
+    setPage(pageParam)
   }, [searchParams])
 
   // Check authentication
@@ -124,6 +130,9 @@ export default function DashboardPage() {
       loadCourseData(courseId)
     } else {
       setCourse(null)
+      setCurrentLesson(null)
+      setCompletedLessons(new Set())
+      setProgress(0)
     }
   }, [user, courseId])
 
@@ -213,12 +222,13 @@ export default function DashboardPage() {
 
   return (
     <div className={`${GeistSans.className} min-h-screen bg-black text-white flex flex-col`}>
-      <Header />
+      <Header currentView={page === "course" ? "courses" : page} />
 
       <main className="flex-1 pt-32 lg:pt-48">
-        {courseId && course ? (
+        {page === "course" && course ? (
           // Course Player
           <div className="flex h-[calc(100vh-12rem)] lg:h-[calc(100vh-16rem)]">
+            <div className="flex h-[calc(100vh-12rem)] lg:h-[calc(100vh-16rem)]">
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="bg-black aspect-video w-full relative flex-shrink-0">
                 {currentLesson ? (
@@ -355,8 +365,12 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          </div>
+        ) : page === "courses" ? (
+          // Courses list page (can reuse OverviewContent with viewMode=all courses)
+          <OverviewContent userId={user.id} />
         ) : (
-          // Overview
+          // Overview page
           <OverviewContent userId={user.id} />
         )}
       </main>

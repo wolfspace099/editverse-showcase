@@ -79,8 +79,8 @@ export default function LoginPage() {
           </p>
 
           <div className="space-y-4">
-            {/* Real Discord Login - Uncomment when Supabase is fixed */}
-            {/* <Button
+            {/* Real Discord Login */}
+            <Button
               onClick={handleDiscordLogin}
               disabled={loading}
               className="w-full bg-white text-black hover:bg-white/90 rounded-lg h-12 flex items-center justify-center gap-2"
@@ -91,14 +91,15 @@ export default function LoginPage() {
                   Continue with Discord
                 </>
               )}
-            </Button> */}
+            </Button>
 
-            {/* TEMPORARY: Fake login for testing */}
+            {/* Backup/Test login */}
             <Button
               onClick={handleFakeLogin}
-              className="w-full bg-white text-black hover:bg-white/90 rounded-lg h-12 flex items-center justify-center gap-2"
+              variant="outline"
+              className="w-full border-white/10 text-white/40 hover:text-white rounded-lg h-12 flex items-center justify-center gap-2"
             >
-              <FaDiscord className="w-5 h-5" />
+              <FaDiscord className="w-5 h-5 opacity-40" />
               Continue with Discord (Test Mode)
             </Button>
 

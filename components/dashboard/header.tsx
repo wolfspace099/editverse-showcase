@@ -52,9 +52,18 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
   const navRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const underlineRef = useRef<HTMLSpanElement>(null)
 
-  // Sync active tab with currentView prop
+  // Sync active tab with currentView prop and query param
   useEffect(() => {
-    setActiveTab(currentView)
+    const searchParams = new URLSearchParams(window.location.search)
+    const pageParam = searchParams.get('page')
+    
+    if (pageParam) {
+      setActiveTab(pageParam)
+    } else if (currentView) {
+      setActiveTab(currentView)
+    } else {
+      setActiveTab("overview")
+    }
   }, [currentView])
 
   // Scroll detection
@@ -188,11 +197,18 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
       onViewChange(view)
     }
     
-    // Update URL without full page reload
+    // Check for existing course ID in URL
+    const searchParams = new URLSearchParams(window.location.search)
+    const courseId = searchParams.get('course')
+    const query = courseId ? `?course=${courseId}` : ''
+    
     if (view === 'overview') {
-      window.history.pushState({}, '', '/dashboard')
+      router.push(`/dashboard?page=overview${courseId ? `&course=${courseId}` : ''}`)
     } else if (view === 'courses') {
-      window.history.pushState({}, '', '/dashboard/courses')
+      // Navigate to the dedicated courses page
+      router.push('/dashboard/courses')
+    } else {
+      router.push(`/dashboard?page=${view}${query}`)
     }
   }
 
