@@ -30,7 +30,8 @@ import {
   deleteLesson
 } from "@/lib/supabaseApi"
 import { getSupabaseClient } from "@/lib/supabaseClient"
-import { useRouter } from "next/navigation"
+import { useRouter, notFound } from "next/navigation"
+import { BadgeCheck } from "lucide-react"
 
 type Lesson = {
   id: string
@@ -70,6 +71,8 @@ export default function AdminDashboard() {
   const [isCreating, setIsCreating] = useState(false)
   const [stats, setStats] = useState<Record<string, CourseStats>>({})
   const [userId, setUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false)
+  const [checking, setChecking] = useState(true)
 
   // Lesson Management State
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
@@ -97,12 +100,15 @@ export default function AdminDashboard() {
   // Check auth
   useEffect(() => {
     async function checkAuth() {
+      setChecking(true)
       const fakeUser = localStorage.getItem('fake_user')
       if (fakeUser) {
         try {
           const parsed = JSON.parse(fakeUser)
           setUserId(parsed.id)
-          loadCourses()
+          setIsAdmin(false) // Fake users are never database admins
+          setChecking(false)
+          notFound() // Return 404 for fake users in admin panel
           return
         } catch (e) {
           localStorage.removeItem('fake_user')
@@ -111,10 +117,23 @@ export default function AdminDashboard() {
 
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
+        setChecking(false)
         router.push('/login')
         return
       }
+      
+      // Check for admin role in JWT
+      const role = session.user.app_metadata?.role || (session.user as any).role
+      
+      if (role !== 'admin') {
+        setChecking(false)
+        notFound() // Trigger 404 if not admin
+        return
+      }
+
       setUserId(session.user.id)
+      setIsAdmin(true)
+      setChecking(false)
       loadCourses()
     }
     
@@ -280,7 +299,7 @@ export default function AdminDashboard() {
     ? Math.round(Object.values(stats).reduce((sum, s) => sum + s.completionRate, 0) / Object.keys(stats).length)
     : 0
 
-  if (loading && !userId) {
+  if ((loading || checking) && !userId) {
     return (
       <div className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center`}>
         <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white"></div>
@@ -293,7 +312,15 @@ export default function AdminDashboard() {
       <header className="border-b border-white/10 bg-black/50 backdrop-blur-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl lg:text-2xl font-bold">Admin Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl lg:text-2xl font-bold">Admin Dashboard</h1>
+              {isAdmin && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-[11px] font-medium text-white uppercase tracking-wider">
+                  <BadgeCheck className="h-3 w-3 text-white" />
+                  Admin Verified
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               <Button
                 onClick={() => router.push('/dashboard')}
