@@ -74,7 +74,7 @@ export default function OverviewPage() {
               {/* Usage */}
               <div>
                 <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                  Usage
+                  Skill
                 </h3>
 
                 <div className="border border-white/10 rounded-lg bg-black">
@@ -92,26 +92,26 @@ export default function OverviewPage() {
                   <div className="p-5 space-y-5">
                     <UsageItem
                       label="Editing course progress"
-                      current="2.3K"
-                      total="10K"
+                      current="23%"
+                      total="100%"
                       percent={23}
                     />
                     <UsageItem
                       label="Edited lessons"
-                      current="1.3K"
-                      total="5K"
-                      percent={26}
+                      current="13%"
+                      total="100%"
+                      percent={13}
                     />
                     <UsageItem
                       label="Rendered previews"
-                      current="418"
-                      total="1K"
+                      current="41%"
+                      total="100%"
                       percent={41}
                     />
                     <UsageItem
                       label="Exported projects"
-                      current="53"
-                      total="100"
+                      current="53%"
+                      total="100%"
                       percent={53}
                       expandable
                     />
