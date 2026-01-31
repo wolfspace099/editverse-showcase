@@ -79,7 +79,7 @@ export default function OverviewPage() {
 
                 <div className="border border-white/10 rounded-lg bg-black">
                   <div className="p-5 border-b border-white/10 flex items-center justify-between">
-                    <span className="text-xs text-white/50">Last 30 days</span>
+                    <span className="text-xs text-white/50">Overall progress to obtain a higher skill level</span>
                     <Button 
                       variant="ghost" 
                       size="sm"
@@ -91,28 +91,28 @@ export default function OverviewPage() {
                   
                   <div className="p-5 space-y-5">
                     <UsageItem
-                      label="Editing course progress"
-                      current="23%"
-                      total="100%"
-                      percent={23}
+                      label="Courses completed"
+                      current="2"
+                      total="10"
+                      percent={20}
                     />
                     <UsageItem
-                      label="Edited lessons"
-                      current="13%"
-                      total="100%"
-                      percent={13}
+                      label="Assets used"
+                      current="13"
+                      total="50"
+                      percent={26}
                     />
                     <UsageItem
-                      label="Rendered previews"
-                      current="41%"
-                      total="100%"
+                      label="Orders made"
+                      current="41"
+                      total="100"
                       percent={41}
                     />
                     <UsageItem
-                      label="Exported projects"
-                      current="53%"
-                      total="100%"
-                      percent={53}
+                      label="Videos edited"
+                      current="3"
+                      total="25"
+                      percent={15}
                       expandable
                     />
                   </div>
