@@ -266,16 +266,25 @@ export default function AdminDashboard() {
     if (!selectedCourseId) return
     if (!chapterForm.title) return
 
+    let savedChapter: Chapter
+
     if (editingChapterId) {
-      await updateCourseChapter(editingChapterId, chapterForm)
+      savedChapter = await updateCourseChapter(editingChapterId, chapterForm)
+      setChapters((prev) =>
+        prev.map((c) => (c.id === editingChapterId ? savedChapter : c))
+      )
     } else {
-      await createCourseChapter({ ...chapterForm, course_id: selectedCourseId })
+      savedChapter = await createCourseChapter({ ...chapterForm, course_id: selectedCourseId })
+      setChapters((prev) => [...prev, savedChapter])
     }
 
     setEditingChapterId(null)
     setChapterForm({ title: "", order_index: 0 })
-    loadLessons(selectedCourseId)
   }
+
+
+
+
 
   async function handleDeleteChapter(id: string) {
     if (!confirm("Delete chapter? Lessons will become unassigned.")) return
@@ -451,145 +460,181 @@ export default function AdminDashboard() {
                   />
 
                   {selectedCourseId === course.id && (
-                    <div className="ml-8 p-6 border border-white/5 rounded-lg bg-white/[0.02] space-y-6">
-                      {/* lessons and chapters management */}
-                      <div className="flex flex-col gap-4">
-                        {/* Chapters */}
+                  <div className="ml-8 p-6 border border-white/5 rounded-lg bg-white/[0.02] space-y-6">
+                    <div className="flex flex-col gap-4">
+                      {/* Chapters */}
+                      <div className="space-y-2">
+                        <p className="text-xs uppercase tracking-wider text-white/40">Chapters</p>
+                        {chapters.map((chapter) => (
+                          <div key={chapter.id} className="flex items-center justify-between px-3 py-2 rounded border border-white/10">
+                            <div className="text-sm">{chapter.order_index + 1}. {chapter.title}</div>
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setEditingChapterId(chapter.id)
+                                  setChapterForm({ title: chapter.title, order_index: chapter.order_index })
+                                }}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-white/40 hover:text-red-400"
+                                onClick={() => handleDeleteChapter(chapter.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Add / Edit chapter form */}
+                        <div className="grid grid-cols-3 gap-2 pt-2">
+                          <Input
+                            placeholder="Chapter title"
+                            value={chapterForm.title}
+                            onChange={(e) => setChapterForm({ ...chapterForm, title: e.target.value })}
+                            className="bg-black border-white/10"
+                          />
+                          <Input
+                            type="number"
+                            value={chapterForm.order_index}
+                            onChange={(e) => setChapterForm({ ...chapterForm, order_index: parseInt(e.target.value) || 0 })}
+                            className="bg-black border-white/10"
+                          />
+                          <Button size="sm" onClick={handleSaveChapter}>
+                            <Save className="h-4 w-4 mr-2" /> {editingChapterId ? "Update" : "Add"}
+                          </Button>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setIsCreatingLesson(true)
+                            setEditingLessonId(null)
+                            setLessonFormData({
+                              title: "",
+                              description: "",
+                              video_url: "",
+                              duration_minutes: 0,
+                              order_index: lessons.length,
+                              chapter_id: null,
+                            })
+                          }}
+                          className="mt-2"
+                        >
+                          <Plus className="mr-2 h-4 w-4" /> Add Lesson
+                        </Button>
+                      </div>
+
+                      {/* Lesson Form */}
+                      {(isCreatingLesson || editingLessonId) && (
+                        <div className="p-4 border border-white/10 rounded bg-black/40 space-y-4">
+                          <Input
+                            placeholder="Lesson title"
+                            value={lessonFormData.title}
+                            onChange={(e) => setLessonFormData({ ...lessonFormData, title: e.target.value })}
+                            className="bg-black border-white/10"
+                          />
+                          <textarea
+                            placeholder="Lesson description"
+                            value={lessonFormData.description}
+                            onChange={(e) => setLessonFormData({ ...lessonFormData, description: e.target.value })}
+                            rows={3}
+                            className="w-full px-3 py-2 rounded-md bg-black border border-white/10 text-white resize-none"
+                          />
+                          <Input
+                            placeholder="Video URL"
+                            value={lessonFormData.video_url}
+                            onChange={(e) => setLessonFormData({ ...lessonFormData, video_url: e.target.value })}
+                            className="bg-black border-white/10"
+                          />
+                          <Input
+                            type="number"
+                            placeholder="Duration in minutes"
+                            value={lessonFormData.duration_minutes}
+                            onChange={(e) => setLessonFormData({ ...lessonFormData, duration_minutes: parseInt(e.target.value) || 0 })}
+                            className="bg-black border-white/10"
+                          />
+
+                          {/* Chapter selector */}
+                          {chapters.length > 0 && (
+                            <div>
+                              <label className="block text-sm text-white/70 mb-1">Chapter</label>
+                              <select
+                                value={lessonFormData.chapter_id || ""}
+                                onChange={(e) =>
+                                  setLessonFormData({ ...lessonFormData, chapter_id: e.target.value || null })
+                                }
+                                className="w-full h-10 px-3 rounded-md bg-black border border-white/10 text-white"
+                              >
+                                <option value="">Unassigned</option>
+                                {chapters.map((chapter) => (
+                                  <option key={chapter.id} value={chapter.id}>
+                                    {chapter.order_index + 1}. {chapter.title}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2">
+                            <Button onClick={handleSaveLesson}>
+                              <Save className="h-4 w-4 mr-2" /> Save
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsCreatingLesson(false)
+                                setEditingLessonId(null)
+                              }}
+                            >
+                              <X className="h-4 w-4 mr-2" /> Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+
+                      {/* Lessons list */}
+                      {lessonLoading ? (
+                        <div className="py-4 text-center text-white/40">Loading lessons...</div>
+                      ) : lessons.length === 0 ? (
+                        <div className="py-4 text-center text-white/40">No lessons in this course.</div>
+                      ) : (
                         <div className="space-y-2">
-                          <p className="text-xs uppercase tracking-wider text-white/40">Chapters</p>
-                          {chapters.map((chapter) => (
-                            <div key={chapter.id} className="flex items-center justify-between px-3 py-2 rounded border border-white/10">
-                              <div className="text-sm">{chapter.order_index + 1}. {chapter.title}</div>
-                              <div className="flex gap-1">
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingChapterId(chapter.id); setChapterForm({ title: chapter.title, order_index: chapter.order_index }) }}>
+                          {lessons.map((lesson) => (
+                            <div key={lesson.id} className="flex items-center justify-between p-3 border border-white/5 rounded bg-white/[0.01] hover:bg-white/[0.03] transition group">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded bg-white/5 flex items-center justify-center text-xs text-white/40 font-mono">
+                                  {lesson.order_index + 1}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">{lesson.title}</p>
+                                  <p className="text-xs text-white/40 flex items-center gap-2">
+                                    <Play className="h-3 w-3" /> {lesson.duration_minutes} min
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => handleEditLesson(lesson)}>
                                   <Edit2 className="h-4 w-4" />
                                 </Button>
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-red-400" onClick={() => handleDeleteChapter(chapter.id)}>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-red-400" onClick={() => handleDeleteLesson(lesson.id)}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
                           ))}
-
-                          {/* Add/edit chapter */}
-                          <div className="grid grid-cols-3 gap-2 pt-2">
-                            <Input placeholder="Chapter title"
-                              value={chapterForm.title}
-                              onChange={(e) => setChapterForm({ ...chapterForm, title: e.target.value })}
-                              className="bg-black border-white/10"
-                            />
-                            <Input
-                              type="number"
-                              value={chapterForm.order_index}
-                              onChange={(e) => setChapterForm({ ...chapterForm, order_index: parseInt(e.target.value) || 0 })}
-                              className="bg-black border-white/10"
-                            />
-                            <Button size="sm" onClick={handleSaveChapter}>
-                              <Save className="h-4 w-4 mr-2" /> Save
-                            </Button>
-                          </div>
-
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setIsCreatingLesson(true)
-                              setEditingLessonId(null)
-                              setLessonFormData({
-                                title: "",
-                                description: "",
-                                video_url: "",
-                                duration_minutes: 0,
-                                order_index: lessons.length,
-                                chapter_id: null,
-                              })
-                            }}
-                            className="mt-2"
-                          >
-                            <Plus className="mr-2 h-4 w-4" /> Add Lesson
-                          </Button>
                         </div>
-
-                        {/* Lesson Form */}
-                        {(isCreatingLesson || editingLessonId) && (
-                          <div className="p-4 border border-white/10 rounded bg-black/40 space-y-4">
-                            <Input
-                              placeholder="Lesson title"
-                              value={lessonFormData.title}
-                              onChange={(e) => setLessonFormData({ ...lessonFormData, title: e.target.value })}
-                              className="bg-black border-white/10"
-                            />
-                            <textarea
-                              placeholder="Lesson description"
-                              value={lessonFormData.description}
-                              onChange={(e) => setLessonFormData({ ...lessonFormData, description: e.target.value })}
-                              rows={3}
-                              className="w-full px-3 py-2 rounded-md bg-black border border-white/10 text-white resize-none"
-                            />
-                            <Input
-                              placeholder="Video URL"
-                              value={lessonFormData.video_url}
-                              onChange={(e) => setLessonFormData({ ...lessonFormData, video_url: e.target.value })}
-                              className="bg-black border-white/10"
-                            />
-                            <Input
-                              type="number"
-                              placeholder="Duration in minutes"
-                              value={lessonFormData.duration_minutes}
-                              onChange={(e) => setLessonFormData({ ...lessonFormData, duration_minutes: parseInt(e.target.value) || 0 })}
-                              className="bg-black border-white/10"
-                            />
-                            <div className="flex gap-2">
-                              <Button onClick={handleSaveLesson}>
-                                <Save className="h-4 w-4 mr-2" /> Save
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => {
-                                  setIsCreatingLesson(false)
-                                  setEditingLessonId(null)
-                                }}
-                              >
-                                <X className="h-4 w-4 mr-2" /> Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Lessons list */}
-                        {lessonLoading ? (
-                          <div className="py-4 text-center text-white/40">Loading lessons...</div>
-                        ) : lessons.length === 0 ? (
-                          <div className="py-4 text-center text-white/40">No lessons in this course.</div>
-                        ) : (
-                          <div className="space-y-2">
-                            {lessons.map((lesson) => (
-                              <div key={lesson.id} className="flex items-center justify-between p-3 border border-white/5 rounded bg-white/[0.01] hover:bg-white/[0.03] transition group">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded bg-white/5 flex items-center justify-center text-xs text-white/40 font-mono">
-                                    {lesson.order_index + 1}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">{lesson.title}</p>
-                                    <p className="text-xs text-white/40 flex items-center gap-2">
-                                      <Play className="h-3 w-3" /> {lesson.duration_minutes} min
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white" onClick={() => handleEditLesson(lesson)}>
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-red-400" onClick={() => handleDeleteLesson(lesson.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+                )}
                 </div>
               ))}
             </div>
@@ -598,7 +643,7 @@ export default function AdminDashboard() {
       </main>
     </div>
   )
-}
+} 
 
 function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: string | number }) {
   return (

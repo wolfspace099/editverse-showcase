@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './supabaseClient'
 
+
 const supabase = getSupabaseClient()
 
 // ============= COURSES =============
@@ -288,6 +289,13 @@ export async function updateUserStats(userId: string, updates: any) {
 
 // ============= ADMIN FUNCTIONS =============
 
+type Chapter = {
+  id: string
+  title: string
+  order_index: number
+}
+
+
 export async function getAllCoursesAdmin() {
   const { data, error } = await supabase
     .from('courses')
@@ -325,23 +333,39 @@ export function getCourseChapters(courseId: string) {
     .eq("course_id", courseId)
 }
 
-export function createCourseChapter(data: {
-  course_id: string
+export async function createCourseChapter(chapter: {
   title: string
   order_index: number
-}) {
-  return supabase.from("course_chapters").insert(data)
+  course_id: string
+}): Promise<Chapter> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from("course_chapters")
+    .insert(chapter)
+    .select()
+    .single() // make sure we get the inserted row
+
+  if (error) throw error
+  return data as Chapter
 }
 
-export function updateCourseChapter(id: string, data: {
-  title: string
-  order_index: number
-}) {
-  return supabase
+
+export async function updateCourseChapter(
+  chapterId: string,
+  chapter: { title: string; order_index: number }
+): Promise<Chapter> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
     .from("course_chapters")
-    .update(data)
-    .eq("id", id)
+    .update(chapter)
+    .eq("id", chapterId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as Chapter
 }
+
 
 export function deleteCourseChapter(id: string) {
   return supabase
