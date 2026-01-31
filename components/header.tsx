@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react"
 import { LeLoLogo } from "./lelo-logo"
 import { Button } from "@/components/ui/button"
-import { DiscordLoginPopup } from "./login"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 import { UserCheck, LogOut, Settings, Home, ChevronDown } from "lucide-react"
 import {
@@ -178,7 +177,7 @@ export function Header({ children }: { children?: React.ReactNode }) {
               <Button
                 size="sm"
                 className="bg-white text-black hover:bg-white/90 transition-all duration-200 rounded-lg text-sm font-medium"
-                onClick={() => setPopupOpen(true)}
+                onClick={() => window.location.href = "/login"}
               >
                 Join Now
               </Button>
@@ -189,8 +188,6 @@ export function Header({ children }: { children?: React.ReactNode }) {
         {/* Children (Search bar and controls) */}
         {children}
       </header>
-
-      {popupOpen && <DiscordLoginPopup onClose={() => setPopupOpen(false)} />}
     </>
   )
 }

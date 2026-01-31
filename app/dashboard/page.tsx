@@ -1,320 +1,365 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { GeistSans } from "geist/font/sans"
 import { Header } from "@/components/dashboard/header"
+import OverviewContent from "@/components/dashboard/overview-content"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { 
-  Search, 
-  MoreVertical,
-  Activity,
+import Link from "next/link"
+import {
+  Play,
+  CheckCircle2,
+  Circle,
+  ChevronLeft,
   ChevronDown,
-  Grid3x3,
-  List
+  ChevronUp,
+  Clock,
+  Award
 } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import {
+  getCourseById,
+  getCourseProgress,
+  startCourse,
+  updateCourseProgress,
+  getLessonCompletions,
+  markLessonComplete,
+  unmarkLessonComplete
+} from "@/lib/supabaseApi"
+import { getSupabaseClient } from "@/lib/supabaseClient"
 
-export default function OverviewPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-
-  return (
-    <div className={`${GeistSans.className} min-h-screen bg-black text-white`}>
-      <Header />
-
-      <main className="pt-48 pb-20">
-        <div className="max-w-[1440px] mx-auto px-8">
-          <div className="mb-10">
-            <div className="flex items-center justify-between gap-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                <Input
-                  type="text"
-                  placeholder="Search Courses..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 h-11 bg-transparent border border-white/10 rounded-md text-sm text-white placeholder:text-white/40 focus:border-white/30 focus:ring-0 transition-colors hover:border-white/20"
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-white/5 rounded-md border border-white/10 transition-colors">
-                  <MoreVertical className="h-4 w-4 text-white/60" />
-                </button>
-
-                <div className="flex items-center border border-white/10 rounded-md">
-                  <button 
-                    onClick={() => setViewMode("grid")}
-                    className={`p-2 ${viewMode === "grid" ? "bg-white/10" : "hover:bg-white/5"} transition-colors`}
-                  >
-                    <Grid3x3 className="h-4 w-4 text-white/60" />
-                  </button>
-                  <button 
-                    onClick={() => setViewMode("list")}
-                    className={`p-2 ${viewMode === "list" ? "bg-white/10" : "hover:bg-white/5"} transition-colors border-l border-white/10`}
-                  >
-                    <List className="h-4 w-4 text-white/60" />
-                  </button>
-                </div>
-
-                <Button 
-                  size="sm"
-                  className="h-11 bg-white text-black hover:bg-white/90 text-sm font-medium rounded-md px-5"
-                >
-                  Add New...
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-12 gap-8">
-            {/* Left column */}
-            <div className="col-span-12 lg:col-span-3 space-y-10">
-
-              {/* Usage */}
-              <div>
-                <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                  Skill
-                </h3>
-
-                <div className="border border-white/10 rounded-lg bg-black">
-                  <div className="p-5 border-b border-white/10 flex items-center justify-between">
-                    <span className="text-xs text-white/50">Overall progress to obtain a higher skill level</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-7 px-3 text-xs border border-white/10 hover:bg-white/5 rounded-md"
-                    >
-                      Upgrade
-                    </Button>
-                  </div>
-                  
-                  <div className="p-5 space-y-5">
-                    <UsageItem
-                      label="Courses completed"
-                      current="2"
-                      total="10"
-                      percent={20}
-                    />
-                    <UsageItem
-                      label="Assets used"
-                      current="13"
-                      total="50"
-                      percent={26}
-                    />
-                    <UsageItem
-                      label="Orders made"
-                      current="41"
-                      total="100"
-                      percent={41}
-                    />
-                    <UsageItem
-                      label="Videos edited"
-                      current="3"
-                      total="25"
-                      percent={15}
-                      expandable
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Assets */}
-              <div>
-                <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                  Assets
-                </h3>
-
-                <div className="border border-white/10 rounded-lg bg-black p-6">
-                  <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                  Get premium assets, all for free
-                  </h3>
-                  <p className="text-sm text-white/70 leading-relaxed mb-4">
-                    Access your shared editing assets, templates, presets and media packs inside Assetverse.
-                  </p>
-
-                  <Button
-                    asChild
-                    className="bg-white text-black hover:bg-white/90 h-10 text-sm rounded-md px-5"
-                  >
-                    <a href="/assetverse">
-                      Open Assetverse
-                    </a>
-                  </Button>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Main column */}
-            <div className="col-span-12 lg:col-span-9">
-              <div className="mb-6">
-                <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                  Courses
-                </h3>
-              </div>
-
-              <div
-                className={
-                  viewMode === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
-                    : "grid grid-cols-1 gap-5"
-                }
-              >
-                <CourseCard
-                  title="Video Editing Foundations"
-                  description="Cut, trim and structure footage with a clean professional workflow."
-                  image="/images/course-preview-1.jpg"
-                  progress={68}
-                />
-
-                <CourseCard
-                  title="Advanced Timeline & Layer Editing"
-                  description="Master complex timelines, blending modes and layered edits."
-                  image="/images/course-preview-2.jpg"
-                  progress={32}
-                />
-
-                <CourseCard
-                  title="Motion Graphics For Editors"
-                  description="Create titles, lower thirds and animated overlays directly in your edits."
-                  image="/images/course-preview-3.jpg"
-                  progress={84}
-                />
-
-                <CourseCard
-                  title="Color Correction & Grading"
-                  description="Professional color workflows for cinematic editing projects."
-                  image="/images/course-preview-4.jpg"
-                  progress={14}
-                />
-
-                <CourseCard
-                  title="Audio Cleanup For Video Editors"
-                  description="Fix noise, balance dialogue and enhance sound directly in your edits."
-                  image="/images/course-preview-5.jpg"
-                  progress={21}
-                />
-
-                <CourseCard
-                  title="Fast Editing With Keyboard Shortcuts"
-                  description="Speed up your entire editing workflow using pro shortcut setups."
-                  image="/images/course-preview-6.jpg"
-                  progress={57}
-                />
-
-                <CourseCard
-                  title="Multi-Cam Editing Techniques"
-                  description="Edit interviews and live events using professional multi-camera workflows."
-                  image="/images/course-preview-7.jpg"
-                  progress={9}
-                />
-              </div>
-
-              <div className="mt-10 flex justify-center">
-                <Button
-                  variant="ghost"
-                  className="border border-white/10 hover:bg-white/5 text-white/70 text-sm h-11 rounded-md px-6"
-                >
-                  Browse more
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-function UsageItem({ 
-  label, 
-  current, 
-  total, 
-  percent,
-  expandable 
-}: { 
-  label: string
-  current: string
-  total: string
-  percent: number
-  expandable?: boolean
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-white/70">
-          {label}
-        </span>
-
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-white/90">{current}</span>
-          <span className="text-white/30">/</span>
-          <span className="text-white/40">{total}</span>
-          {expandable && (
-            <ChevronDown className="h-3.5 w-3.5 text-white/40 ml-1" />
-          )}
-        </div>
-      </div>
-
-      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-        <div
-          className="h-full bg-white/70 rounded-full transition-all"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function CourseCard({
-  title,
-  description,
-  image,
-  progress
-}: {
+type Lesson = {
+  id: string
   title: string
   description: string
-  image: string
-  progress: number
-}) {
+  video_url: string
+  duration_minutes: number
+  order_index: number
+}
+
+type Course = {
+  id: string
+  title: string
+  description: string
+  category: string
+  image_url: string
+  difficulty: string
+  duration_minutes: number
+  lessons_count: number
+  lessons: Lesson[]
+}
+
+type User = {
+  id: string
+  email?: string
+  user_metadata?: {
+    full_name?: string
+    avatar_url?: string
+  }
+}
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const supabase = getSupabaseClient()
+  
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Course Player State
+  const [courseId, setCourseId] = useState<string | null>(null)
+  const [course, setCourse] = useState<Course | null>(null)
+  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null)
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set())
+  const [progress, setProgress] = useState(0)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // Detect course from query param
+  useEffect(() => {
+    const id = searchParams?.get("course")
+    setCourseId(id)
+  }, [searchParams])
+
+  // Check authentication
+  useEffect(() => {
+    let mounted = true
+
+    async function resolveUser() {
+      const fakeUserRaw =
+        typeof window !== "undefined"
+          ? localStorage.getItem("fake_user")
+          : null
+
+      if (fakeUserRaw) {
+        try {
+          const fakeUser = JSON.parse(fakeUserRaw)
+          if (fakeUser?.id && mounted) {
+            setUser(fakeUser)
+            setLoading(false)
+            return
+          }
+        } catch {
+          localStorage.removeItem("fake_user")
+        }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!mounted) return
+
+      if (!session?.user) {
+        router.replace("/login")
+        return
+      }
+
+      setUser(session.user)
+      setLoading(false)
+    }
+
+    resolveUser()
+  }, [supabase, router])
+
+  // Load course if courseId exists
+  useEffect(() => {
+    if (user && courseId) {
+      loadCourseData(courseId)
+    } else {
+      setCourse(null)
+    }
+  }, [user, courseId])
+
+  async function loadCourseData(id: string) {
+    setLoading(true)
+    const { data: courseData } = await getCourseById(id)
+
+    if (!courseData) {
+      setCourse(null)
+      setLoading(false)
+      return
+    }
+
+    const sortedLessons = [...courseData.lessons].sort(
+      (a, b) => a.order_index - b.order_index
+    )
+
+    setCourse({ ...courseData, lessons: sortedLessons })
+    if (sortedLessons.length > 0) setCurrentLesson(sortedLessons[0])
+
+    // Load progress
+    const userId = user!.id
+    let { data: progressData } = await getCourseProgress(userId, id)
+    if (!progressData) {
+      const { data: newProgress } = await startCourse(userId, id)
+      progressData = newProgress
+    }
+
+    if (progressData) {
+      setProgress(progressData.progress_percentage || 0)
+      if (progressData.last_lesson_id) {
+        const lastLesson = sortedLessons.find(l => l.id === progressData.last_lesson_id)
+        if (lastLesson) setCurrentLesson(lastLesson)
+      }
+    }
+
+    const { data: completions } = await getLessonCompletions(userId, id)
+    if (completions) setCompletedLessons(new Set(completions.map(c => c.lesson_id)))
+
+    setLoading(false)
+  }
+
+  async function handleLessonSelect(lesson: Lesson) {
+    setCurrentLesson(lesson)
+    if (!user || !course) return
+    await updateCourseProgress(user.id, course.id, {
+      last_lesson_id: lesson.id,
+      last_accessed_at: new Date().toISOString()
+    })
+  }
+
+  async function toggleLessonComplete(lessonId: string) {
+    if (!user || !course) return
+    const isCompleted = completedLessons.has(lessonId)
+    if (isCompleted) {
+      await unmarkLessonComplete(user.id, lessonId)
+      setCompletedLessons(prev => { const next = new Set(prev); next.delete(lessonId); return next })
+    } else {
+      await markLessonComplete(user.id, lessonId, course.id)
+      setCompletedLessons(prev => new Set([...prev, lessonId]))
+    }
+    const { data: updatedProgress } = await getCourseProgress(user.id, course.id)
+    if (updatedProgress) setProgress(updatedProgress.progress_percentage || 0)
+  }
+
+  function handleNextLesson() {
+    if (!course || !currentLesson) return
+    const idx = course.lessons.findIndex(l => l.id === currentLesson.id)
+    if (idx < course.lessons.length - 1) handleLessonSelect(course.lessons[idx + 1])
+  }
+
+  function handlePreviousLesson() {
+    if (!course || !currentLesson) return
+    const idx = course.lessons.findIndex(l => l.id === currentLesson.id)
+    if (idx > 0) handleLessonSelect(course.lessons[idx - 1])
+  }
+
+  if (loading) {
+    return (
+      <div className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center`}>
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white" />
+      </div>
+    )
+  }
+
+  if (!user) return null
+
   return (
-    <div className="group border border-white/10 rounded-xl bg-black hover:border-white/20 transition-colors overflow-hidden">
-      <div className="aspect-[16/9] w-full bg-white/5">
-        <img
-          src={image}
-          alt={title}
-          className="w-full h-full object-cover"
-        />
-      </div>
+    <div className={`${GeistSans.className} min-h-screen bg-black text-white flex flex-col`}>
+      <Header />
 
-      <div className="p-5">
-        <p className="text-xs text-white/50 mb-1">
-          Editing course
-        </p>
+      <main className="flex-1 pt-32 lg:pt-48">
+        {courseId && course ? (
+          // Course Player
+          <div className="flex h-[calc(100vh-12rem)] lg:h-[calc(100vh-16rem)]">
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="bg-black aspect-video w-full relative flex-shrink-0">
+                {currentLesson ? (
+                  <img src={course.image_url} alt={currentLesson.title} className="w-full h-full object-contain"/>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/40">
+                    Select a lesson to begin
+                  </div>
+                )}
 
-        <h3 className="text-base font-medium mb-1">
-          {title}
-        </h3>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handlePreviousLesson}
+                    disabled={!currentLesson || currentLesson.order_index === 0}
+                    className="h-8 px-3"
+                  >
+                    <ChevronLeft className="h-4 w-4"/>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleNextLesson}
+                    disabled={!currentLesson || currentLesson.order_index === course.lessons_count -1}
+                    className="h-8 px-4"
+                  >
+                    Next Lesson
+                  </Button>
 
-        <p className="text-sm text-white/40 leading-relaxed mb-5">
-          {description}
-        </p>
+                  {currentLesson && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleLessonComplete(currentLesson.id)}
+                      className="ml-auto h-8 px-4"
+                    >
+                      {completedLessons.has(currentLesson.id) ? (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Completed
+                        </>
+                      ) : (
+                        <>
+                          <Circle className="mr-2 h-4 w-4" />
+                          Mark Complete
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-white/40">
-            <span>Progress</span>
-            <span>{progress}%</span>
+              <div className="flex-1 overflow-y-auto p-4 lg:p-8 max-w-4xl">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center text-sm text-white/60 hover:text-white mb-4 transition"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1"/>
+                  Back to dashboard
+                </Link>
+
+                <h1 className="text-2xl lg:text-3xl font-bold mb-2">{course.title}</h1>
+
+                <div className="flex flex-wrap items-center gap-3 text-sm text-white/60 mb-6">
+                  <span className="flex items-center gap-1"><Award className="h-4 w-4"/>{course.difficulty}</span>
+                  <span className="flex items-center gap-1"><Clock className="h-4 w-4"/>{course.duration_minutes} min total</span>
+                  <span className="flex items-center gap-1"><Play className="h-4 w-4"/>{course.lessons_count} lessons</span>
+                </div>
+
+                <div className="mb-8">
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-white/70">Your Progress</span>
+                    <span className="text-white">{progress}% Complete</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full bg-white/80 rounded-full transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {currentLesson && (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-2">
+                      Lesson {currentLesson.order_index + 1}: {currentLesson.title}
+                    </h2>
+                    <p className="text-white/70 leading-relaxed">{currentLesson.description || "No description available."}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className={`${sidebarCollapsed ? "w-0" : "w-full lg:w-96"} border-l border-white/10 bg-black/50 flex flex-col transition-all duration-300 absolute lg:relative inset-y-0 right-0 z-30 lg:z-auto`}>
+              <div className="p-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+                <h3 className="font-semibold">Course Content</h3>
+                <Button size="sm" variant="ghost" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="lg:hidden h-8 w-8 p-0">
+                  {sidebarCollapsed ? <ChevronUp className="h-4 w-4"/> : <ChevronDown className="h-4 w-4"/>}
+                </Button>
+              </div>
+
+              {!sidebarCollapsed && (
+                <div className="flex-1 overflow-y-auto">
+                  {course.lessons.map((lesson, idx) => {
+                    const isCompleted = completedLessons.has(lesson.id)
+                    const isCurrent = currentLesson?.id === lesson.id
+                    return (
+                      <button
+                        key={lesson.id}
+                        onClick={() => handleLessonSelect(lesson)}
+                        className={`w-full text-left p-4 border-b border-white/10 hover:bg-white/5 transition ${isCurrent ? "bg-white/10" : ""}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 mt-0.5">
+                            {isCompleted ? <CheckCircle2 className="h-5 w-5 text-green-500"/> : <Circle className="h-5 w-5 text-white/30"/>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-white/50 mb-1">Lesson {idx + 1}</p>
+                            <p className={`text-sm font-medium mb-1 ${isCurrent ? "text-white" : "text-white/80"}`}>{lesson.title}</p>
+                            <p className="text-xs text-white/40 flex items-center gap-1"><Clock className="h-3 w-3"/>{lesson.duration_minutes} min</p>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="lg:hidden p-2 border-t border-white/10">
+                <Button size="sm" variant="outline" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="w-full">
+                  {sidebarCollapsed ? (<><ChevronUp className="mr-2 h-4 w-4"/> Show Lessons</>) : (<><ChevronDown className="mr-2 h-4 w-4"/> Hide Lessons</>)}
+                </Button>
+              </div>
+            </div>
           </div>
-
-          <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-            <div
-              className="h-full bg-white/80 rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      </div>
+        ) : (
+          // Overview
+          <OverviewContent userId={user.id} />
+        )}
+      </main>
     </div>
   )
 }
