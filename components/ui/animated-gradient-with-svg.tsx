@@ -1,7 +1,5 @@
-"use client"
-
 import type React from "react"
-import { useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useDimensions } from "@/components/hooks/use-debounced-dimensions"
 
@@ -15,11 +13,23 @@ const randomInt = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-const AnimatedGradient: React.FC<AnimatedGradientProps> = ({ colors, speed = 5, blur = "light" }) => {
+const AnimatedGradient: React.FC<AnimatedGradientProps> = ({
+  colors,
+  speed = 5,
+  blur = "light",
+}) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const dimensions = useDimensions(containerRef)
 
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const randomValues = useMemo(() => {
+    if (!mounted) return [] // don't generate on SSR
+
     return colors.map(() => ({
       top: Math.random() * 50,
       left: Math.random() * 50,
@@ -34,20 +44,23 @@ const AnimatedGradient: React.FC<AnimatedGradientProps> = ({ colors, speed = 5, 
       widthMultiplier: randomInt(0.5, 1.5),
       heightMultiplier: randomInt(0.5, 1.5),
     }))
-  }, [colors.length])
+  }, [colors, mounted])
 
   const circleSize = useMemo(() => {
-    if (dimensions.width === 0 && dimensions.height === 0) {
-      return 400 // Default size for SSR
+    if (!mounted || (dimensions.width === 0 && dimensions.height === 0)) {
+      return 400 // default SSR size
     }
     return Math.max(dimensions.width, dimensions.height)
-  }, [dimensions.width, dimensions.height])
+  }, [dimensions.width, dimensions.height, mounted])
 
-  const blurClass = blur === "light" ? "blur-2xl" : blur === "medium" ? "blur-3xl" : "blur-[100px]"
+  const blurClass =
+    blur === "light" ? "blur-2xl" : blur === "medium" ? "blur-3xl" : "blur-[100px]"
+
+  if (!mounted) return null // prevent SSR mismatch
 
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">
-      <div className={cn(`absolute inset-0`, blurClass)}>
+      <div className={cn("absolute inset-0", blurClass)}>
         {colors.map((color, index) => {
           const randomValue = randomValues[index]
           if (!randomValue) return null
@@ -75,7 +88,13 @@ const AnimatedGradient: React.FC<AnimatedGradientProps> = ({ colors, speed = 5, 
               height={circleSize * randomValue.heightMultiplier}
               viewBox="0 0 100 100"
             >
-              <circle cx="50" cy="50" r="50" fill={color} className="opacity-30 dark:opacity-[0.15]" />
+              <circle
+                cx="50"
+                cy="50"
+                r="50"
+                fill={color}
+                className="opacity-30 dark:opacity-[0.15]"
+              />
             </svg>
           )
         })}

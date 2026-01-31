@@ -1,11 +1,27 @@
 "use client"
 
-function FloatingPaths({ position }: { position: number }) {
-  const paths = Array.from({ length: 24 }, (_, i) => {
-    const randomDashLength = 60 + Math.random() * 80 // 60-140px long dashes
-    const randomGap = 150 + Math.random() * 100 // 150-250px gaps
-    const randomDuration = 8 + Math.random() * 12 // 8-20s duration
-    const randomDelay = Math.random() * 10 // 0-10s delay
+import { useEffect, useMemo, useState } from "react"
+
+interface PathProps {
+  position: number
+}
+
+interface PathData {
+  id: number
+  d: string
+  width: number
+  dashLength: number
+  dashGap: number
+  duration: number
+  delay: number
+}
+
+function generatePaths(position: number): PathData[] {
+  return Array.from({ length: 24 }, (_, i) => {
+    const randomDashLength = 60 + Math.random() * 80
+    const randomGap = 150 + Math.random() * 100
+    const randomDuration = 8 + Math.random() * 12
+    const randomDelay = Math.random() * 10
 
     return {
       id: i,
@@ -23,6 +39,16 @@ function FloatingPaths({ position }: { position: number }) {
       delay: randomDelay,
     }
   })
+}
+
+function FloatingPaths({ position }: PathProps) {
+  const [paths, setPaths] = useState<PathData[]>([])
+
+  useEffect(() => {
+    setPaths(generatePaths(position))
+  }, [position])
+
+  if (!paths.length) return null // SSR-safe
 
   return (
     <div className="absolute inset-0 pointer-events-none">
@@ -66,24 +92,19 @@ function FloatingPaths({ position }: { position: number }) {
   )
 }
 
-function FlippedFloatingPaths({ position }: { position: number }) {
-  const paths = Array.from({ length: 24 }, (_, i) => {
-    const randomDashLength = 60 + Math.random() * 80 // 60-140px long dashes
-    const randomGap = 150 + Math.random() * 100 // 150-250px gaps
-    const randomDuration = 8 + Math.random() * 12 // 8-20s duration
-    const randomDelay = Math.random() * 10 // 0-10s delay
+function FlippedFloatingPaths({ position }: PathProps) {
+  const [paths, setPaths] = useState<PathData[]>([])
 
-    return {
-      id: i,
-      // Flipped path: starts from right side and flows to bottom
-      d: `M${696 + 380 - i * 5 * position} ${-189 - i * 6}C${696 + 380 - i * 5 * position} ${-189 - i * 6} ${696 + 312 - i * 5 * position} ${216 - i * 6} ${696 - 152 + i * 5 * position} ${343 - i * 6}C${696 - 616 + i * 5 * position} ${470 - i * 6} ${696 - 684 + i * 5 * position} ${875 - i * 6} ${696 - 684 + i * 5 * position} ${875 - i * 6}`,
-      width: 0.8 + i * 0.02,
-      dashLength: randomDashLength,
-      dashGap: randomGap,
-      duration: randomDuration,
-      delay: randomDelay,
-    }
-  })
+  useEffect(() => {
+    setPaths(
+      generatePaths(position).map((path) => ({
+        ...path,
+        d: path.d.replace(/M-/, `M${696 + 380 - path.id * 5 * position}`),
+      })),
+    )
+  }, [position])
+
+  if (!paths.length) return null
 
   return (
     <div className="absolute inset-0 pointer-events-none">
