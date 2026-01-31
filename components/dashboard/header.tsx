@@ -30,8 +30,7 @@ type User = {
 export function Header() {
   const supabase = getSupabaseClient()
 
-  const [scrollProgress, setScrollProgress] = useState(0)
-  const [isTop, setIsTop] = useState(true) // true when at top
+  const [isTop, setIsTop] = useState(true)
   const [popupOpen, setPopupOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -43,34 +42,30 @@ export function Header() {
   const profileRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
   const navRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const underlineRef = useRef<HTMLSpanElement>(null)
 
-  // scroll listener
+  // Scroll detection
   useEffect(() => {
     const handleScroll = () => {
-      const y = window.scrollY
-      setScrollProgress(Math.min(y / 100, 1))
-      setIsTop(y < 50)
+      setIsTop(window.scrollY < 50)
     }
-
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // supabase auth
+  // Supabase auth
   useEffect(() => {
     supabase.auth.getSession().then(res => {
       setUser((res.data?.session?.user as User) ?? null)
     })
-
     const { data: authListener } =
       supabase.auth.onAuthStateChange((_event, session) => {
         setUser((session?.user as User) ?? null)
       })
-
     return () => authListener.subscription.unsubscribe()
   }, [supabase])
 
-  // keyboard shortcuts
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "f" || e.key === "F") setSearchOpen(true)
@@ -80,7 +75,7 @@ export function Header() {
     return () => window.removeEventListener("keydown", handleKey)
   }, [])
 
-  // click outside
+  // Click outside profile/notifications
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
@@ -93,6 +88,20 @@ export function Header() {
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
+
+  // Reset underline whenever active tab or window size changes
+  useEffect(() => {
+    const updateUnderline = () => {
+      const activeRef = navRefs.current[activeBottomTab]
+      if (activeRef && underlineRef.current) {
+        underlineRef.current.style.left = `${activeRef.offsetLeft}px`
+        underlineRef.current.style.width = `${activeRef.offsetWidth}px`
+      }
+    }
+    updateUnderline()
+    window.addEventListener("resize", updateUnderline)
+    return () => window.removeEventListener("resize", updateUnderline)
+  }, [activeBottomTab])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -112,8 +121,6 @@ export function Header() {
     { title: "AI course recommendation", time: "1d ago" },
   ]
 
-  const activeRef = navRefs.current[activeBottomTab]
-
   return (
     <>
       {/* SEARCH MODAL */}
@@ -126,7 +133,6 @@ export function Header() {
             >
               ESC
             </button>
-
             <CardContent className="p-4 space-y-3">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -136,7 +142,6 @@ export function Header() {
                   className="rounded-full pl-10 h-9 text-sm"
                 />
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {searchSuggestions.map((suggestion, idx) => (
                   <button
@@ -155,25 +160,47 @@ export function Header() {
 
       {/* HEADER */}
       <header className="fixed top-0 left-0 w-full z-50 transition-all duration-300">
+        {/* Main header container */}
         <div
           className={`flex items-center justify-between px-4 backdrop-blur-lg transition-all duration-300 ${
             isTop ? "h-14" : "h-12"
           }`}
         >
-          {/* Logo */}
-          <div
-            style={{
-              transform: `translateY(${isTop ? 0 : 2}px)`,
-              transition: "transform 0.3s",
-            }}
-          >
+          {/* Logo left/top */}
+          <div className="flex items-center gap-6">
             <LeLoLogo />
+
+            {/* BOTTOM NAVBAR inline when scrolled */}
+            {!isTop && (
+              <div className="flex gap-6 relative">
+                {bottomNavLinks.map(link => (
+                  <button
+                    key={link}
+                    ref={el => {
+                      if (el) navRefs.current[link] = el
+                    }}
+                    onClick={() => setActiveBottomTab(link)}
+                    className={`relative text-sm transition ${
+                      activeBottomTab === link
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {link}
+                  </button>
+                ))}
+                <span
+                  ref={underlineRef}
+                  className="absolute bottom-[-4px] h-[2px] bg-foreground transition-all duration-300"
+                  style={{ left: 0, width: 0 }}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right icons */}
+          {/* Right side (search + icons) - only visible at top */}
           {isTop && (
             <div className="flex items-center gap-4">
-              {/* Search Pill */}
               <div
                 onClick={() => setSearchOpen(true)}
                 className="hidden sm:flex items-center gap-2 px-3 h-8 w-64 rounded-full border border-border bg-muted/40 text-sm text-muted-foreground hover:text-white hover:bg-muted/60 cursor-pointer transition"
@@ -185,7 +212,6 @@ export function Header() {
 
               <div className="h-5 border-l border-border/50" />
 
-              {/* Notifications */}
               <button
                 onClick={() => setNotifOpen(v => !v)}
                 className="h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition"
@@ -195,14 +221,12 @@ export function Header() {
 
               <div className="h-5 border-l border-border/50" />
 
-              {/* Help */}
               <IconButton>
                 <LifeBuoy className="h-3.5 w-3.5 text-gray-400" />
               </IconButton>
 
               <div className="h-5 border-l border-border/50" />
 
-              {/* Profile */}
               <div className="relative" ref={profileRef}>
                 {user && (
                   <div
@@ -240,37 +264,39 @@ export function Header() {
               </div>
             </div>
           )}
-
-          {/* Bottom nav */}
-          <div className="relative flex items-center gap-6 ml-4">
-            {bottomNavLinks.map(link => (
-              <button
-                key={link}
-                ref={el => {
-                  if (el) navRefs.current[link] = el
-                }}
-                onClick={() => setActiveBottomTab(link)}
-                className={`relative text-sm transition ${
-                  activeBottomTab === link
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {link}
-              </button>
-            ))}
-
-            {activeRef && (
-              <span
-                className="absolute bottom-0 h-[2px] bg-foreground transition-all duration-300"
-                style={{
-                  left: activeRef?.offsetLeft ?? 0,
-                  width: activeRef?.offsetWidth ?? 0,
-                }}
-              />
-            )}
-          </div>
         </div>
+
+        {/* Bottom navbar normal, below header at top */}
+        {isTop && (
+          <div className="relative">
+            <div className="flex gap-6 mt-3 px-4">
+              {bottomNavLinks.map(link => (
+                <button
+                  key={link}
+                  ref={el => {
+                    if (el) navRefs.current[link] = el
+                  }}
+                  onClick={() => setActiveBottomTab(link)}
+                  className={`relative text-sm transition ${
+                    activeBottomTab === link
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {link}
+                </button>
+              ))}
+            </div>
+            {/* Separator bar with underline */}
+            <div className="relative h-[2px] bg-border mt-2">
+              <span
+                ref={underlineRef}
+                className="absolute bottom-0 h-[2px] bg-foreground transition-all duration-300"
+                style={{ left: 0, width: 0 }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Notifications dropdown */}
         {notifOpen && (
