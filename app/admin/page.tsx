@@ -123,46 +123,59 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
-    async function checkAuth() {
-      setChecking(true)
+  async function checkAuth() {
+    setChecking(true)
 
-      const fakeUser = localStorage.getItem("fake_user")
-      if (fakeUser) {
-        try {
-          const parsed = JSON.parse(fakeUser)
-          setUserId(parsed.id)
-          setIsAdmin(false)
-          setChecking(false)
-          notFound()
-          return
-        } catch {
-          localStorage.removeItem("fake_user")
-        }
-      }
+    // TEMP: Fake admin user for testing while Supabase is down
+    const fakeAdmin = {
+      id: 'fake-admin-id-123',
+      role: 'admin'
+    }
+    setUserId(fakeAdmin.id)
+    setIsAdmin(true)
+    setChecking(false)
+    loadCourses()
 
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session) {
-        setChecking(false)
-        router.push("/login")
-        return
-      }
-
-      const role = session.user.app_metadata?.role || (session.user as any).role
-      if (role !== "admin") {
+    /*
+    // Original Supabase auth check (commented out)
+    const fakeUser = localStorage.getItem("fake_user")
+    if (fakeUser) {
+      try {
+        const parsed = JSON.parse(fakeUser)
+        setUserId(parsed.id)
+        setIsAdmin(false)
         setChecking(false)
         notFound()
         return
+      } catch {
+        localStorage.removeItem("fake_user")
       }
-
-      setUserId(session.user.id)
-      setIsAdmin(true)
-      setChecking(false)
-      loadCourses()
     }
 
-    checkAuth()
-  }, [])
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      setChecking(false)
+      router.push("/login")
+      return
+    }
+
+    const role = session.user.app_metadata?.role || (session.user as any).role
+    if (role !== "admin") {
+      setChecking(false)
+      notFound()
+      return
+    }
+
+    setUserId(session.user.id)
+    setIsAdmin(true)
+    setChecking(false)
+    loadCourses()
+    */
+  }
+
+  checkAuth()
+}, [])
 
   async function loadCourses() {
     setLoading(true)
