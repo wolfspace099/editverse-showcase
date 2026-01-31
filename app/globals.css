@@ -187,9 +187,3 @@
 .animate-spin-slow-reverse {
   animation: spin-slow-reverse 60s linear infinite;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&display=swap');
-
-body {
-  font-family: 'Geist', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
-}
