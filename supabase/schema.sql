@@ -232,3 +232,45 @@ INSERT INTO courses (title, description, category, image_url, difficulty, durati
 ('Storytelling Through Editing', 'Learn the art of narrative construction and emotional pacing.', 'Editing course', '/images/course-preview-8.jpg', 'Intermediate', 160, 12, 8),
 ('Effects and Transitions Mastery', 'Create seamless transitions and professional visual effects.', 'Editing course', '/images/course-preview-9.jpg', 'Advanced', 220, 16, 9),
 ('Export Settings and Optimization', 'Master export settings for different platforms and formats.', 'Editing course', '/images/course-preview-10.jpg', 'Beginner', 60, 5, 10);
+
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  full_name TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own profile" ON profiles
+  FOR SELECT USING (auth.uid()::text = id::text);
+
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid()::text = id::text);
+
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE USING (auth.uid()::text = id::text);
+
+CREATE POLICY "Admins can view all profiles" ON profiles
+  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO profiles (id, email, full_name, avatar_url)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'avatar_url'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE PROCEDURE handle_new_user();

@@ -23,6 +23,7 @@ export default function DashboardPage() {
   
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authReady, setAuthReady] = useState(false)
 
   // Page state
   const [page, setPage] = useState<string>("overview")
@@ -40,8 +41,35 @@ export default function DashboardPage() {
     setPage(pageParam)
   }, [searchParams, router])
 
+  useEffect(() => {
+    let active = true
+
+    async function exchangeAuthCode() {
+      const code = searchParams?.get("code")
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) {
+          console.error(error)
+        }
+        router.replace("/dashboard")
+      }
+
+      if (active) {
+        setAuthReady(true)
+      }
+    }
+
+    exchangeAuthCode()
+
+    return () => {
+      active = false
+    }
+  }, [searchParams, supabase, router])
+
   // Check authentication
   useEffect(() => {
+    if (!authReady) return
+
     let mounted = true
 
     async function resolveUser() {
@@ -76,7 +104,7 @@ export default function DashboardPage() {
     }
 
     resolveUser()
-  }, [supabase, router])
+  }, [authReady, supabase, router])
 
   if (loading) {
     return (
