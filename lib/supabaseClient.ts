@@ -1,27 +1,9 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js"
+import { createBrowserClient } from '@supabase/ssr'
 
-let supabase: SupabaseClient | null = null
-
-export const getSupabaseClient = (): SupabaseClient => {
-  if (supabase) return supabase
-
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    // Return a dummy client or throw only if actually used
-    throw new Error("Supabase env variables are missing!")
-  }
-
-  supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      auth: {
-        flowType: "pkce",
-        detectSessionInUrl: true,
-        autoRefreshToken: true,
-        persistSession: true
-      }
-    }
+export function getSupabaseClient() {
+  // Let @supabase/ssr handle cookies automatically
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
-
-  return supabase
 }
