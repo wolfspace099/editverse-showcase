@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { GeistSans } from "geist/font/sans"
 import { Header } from "@/components/dashboard/header"
 import OverviewContent from "@/components/dashboard/overview-content"
@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 import type { User } from "@supabase/supabase-js"
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = getSupabaseClient()
@@ -105,5 +105,17 @@ export default function DashboardPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
