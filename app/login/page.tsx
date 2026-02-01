@@ -2,7 +2,6 @@
 
 import { Suspense, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { LeLoLogo } from "@/components/lelo-logo"
 import { FaDiscord } from "react-icons/fa"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -13,13 +12,11 @@ function LoginContent() {
   const searchParams = useSearchParams()
   const supabase = getSupabaseClient()
   const [loading, setLoading] = useState(false)
-  const [showSignIn, setShowSignIn] = useState(false)
   const authError =
     searchParams?.get("error_description") ||
     searchParams?.get("error") ||
     ""
 
-  // Check if already logged in
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -34,7 +31,6 @@ function LoginContent() {
     setLoading(true)
 
     try {
-      // Clear any existing session first
       await supabase.auth.signOut()
 
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -52,9 +48,7 @@ function LoginContent() {
         return
       }
 
-      // The redirect will happen automatically
       if (data?.url) {
-        console.log("Redirecting to Discord...")
         window.location.href = data.url
       }
     } catch (err) {
@@ -63,125 +57,66 @@ function LoginContent() {
     }
   }
 
-  const Loader = () => (
-    <span className="loader-dots relative w-6 h-4 flex items-center justify-between">
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-0" />
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-150" />
-      <span className="w-2 h-2 bg-white rounded-full animate-bounce delay-300" />
-    </span>
-  )
-
   return (
-    <div className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center p-4`}>
-      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-white/10 bg-black shadow-2xl">
-
-        {/* Left side - Login form */}
-        <div className="flex flex-col justify-center px-8 md:px-12 py-12">
-          <div className="w-32 h-24 mb-6">
-            <LeLoLogo size={96} />
+    <div className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center p-6`}>
+      <div className="w-full max-w-sm space-y-8">
+        <div className="flex justify-center">
+          <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center">
+            <FaDiscord className="h-7 w-7 text-white" />
           </div>
+        </div>
 
-          <h1 className="text-3xl font-bold mb-2">
-            {showSignIn ? "Welcome back" : "Welcome"}
-          </h1>
-
-          <p className="text-white/60 mb-8">
-            {showSignIn
-              ? "Sign in to access your account and continue learning."
-              : "Log in to start your onboarding and request access to our assets and courses."}
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-semibold">Login with Discord</h1>
+          <p className="text-sm text-white/50">
+            Join the editing team in minutes
           </p>
-
-          <div className="space-y-4">
-            {authError && (
-              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                {authError === "no_code" && "Authentication failed: No authorization code received"}
-                {authError === "no_session" && "Authentication failed: Could not create session"}
-                {authError !== "no_code" && authError !== "no_session" && authError}
-              </div>
-            )}
-            <Button
-              onClick={handleDiscordLogin}
-              disabled={loading}
-              className="w-full bg-white text-black hover:bg-white/90 rounded-lg h-12 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <Loader />
-              ) : (
-                <>
-                  <FaDiscord className="w-5 h-5" />
-                  Continue with Discord
-                </>
-              )}
-            </Button>
-
-            <p className="text-xs text-white/60 text-center">
-              {showSignIn ? (
-                <>
-                  Don't have an account?{" "}
-                  <button
-                    onClick={() => setShowSignIn(false)}
-                    className="text-white underline hover:text-white/80 transition"
-                  >
-                    Sign up
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <button
-                    onClick={() => setShowSignIn(true)}
-                    className="text-white underline hover:text-white/80 transition"
-                  >
-                    Sign in
-                  </button>
-                </>
-              )}
-            </p>
-
-            <div className="pt-4">
-              <button
-                onClick={() => router.push("/")}
-                className="text-sm text-white/60 hover:text-white transition"
-              >
-                ← Back to home
-              </button>
-            </div>
-
-          </div>
         </div>
 
-        {/* Right side - Visual */}
-        <div className="relative hidden md:block min-h-[500px]">
-          <img
-            src="/images/login-visual.jpg"
-            alt="Login visual"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-black/60 to-black/20" />
-          <div className="absolute inset-0 flex items-center justify-center p-12">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold mb-4">
-                Master Video Editing
-              </h2>
-              <p className="text-white/80 text-lg">
-                Access premium courses, assets, and join our community
-              </p>
-            </div>
+        {authError && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 text-center">
+            {authError === "no_code" && "Authentication failed"}
+            {authError === "no_session" && "Could not create session"}
+            {authError !== "no_code" && authError !== "no_session" && authError}
           </div>
-        </div>
+        )}
 
+        <Button
+          onClick={handleDiscordLogin}
+          disabled={loading}
+          className="w-full bg-white text-black hover:bg-white/90 h-12 text-base font-medium"
+        >
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-black/20 border-t-black" />
+              <span>Connecting...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <FaDiscord className="h-5 w-5" />
+              <span>Login with Discord</span>
+            </div>
+          )}
+        </Button>
+
+        <div className="flex items-center justify-center gap-6 text-xs text-white/40">
+          <button
+            onClick={() => router.push("/")}
+            className="hover:text-white/60 transition"
+          >
+            Home
+          </button>
+          <span>•</span>
+          <a
+            href="https://discord.gg/your-invite"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-white/60 transition"
+          >
+            Join Discord
+          </a>
+        </div>
       </div>
-
-      <style jsx>{`
-        .animate-bounce { animation: bounce 0.6s infinite ease-in-out; }
-        .delay-0 { animation-delay: 0s; }
-        .delay-150 { animation-delay: 0.15s; }
-        .delay-300 { animation-delay: 0.3s; }
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1); }
-        }
-      `}</style>
     </div>
   )
 }

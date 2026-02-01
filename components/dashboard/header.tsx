@@ -171,7 +171,6 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-
     setProfileOpen(false)
     setMobileMenuOpen(false)
     router.push("/")
@@ -180,20 +179,10 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
   const handleNavClick = (view: string) => {
     setActiveTab(view)
     setMobileMenuOpen(false)
+    if (onViewChange) onViewChange(view)
 
-    if (onViewChange) {
-      onViewChange(view)
-    }
-
-    if (view === "overview") {
-      router.push("/dashboard?page=overview")
-      return
-    }
-
-    if (view === "courses") {
-      router.push("/dashboard/courses")
-      return
-    }
+    if (view === "overview") return router.push("/dashboard?page=overview")
+    if (view === "courses") return router.push("/dashboard/courses")
 
     router.push(`/dashboard?page=${view}`)
   }
@@ -225,20 +214,20 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
             </button>
             <CardContent className="p-4 space-y-3">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white" />
                 <Input
                   autoFocus
                   placeholder="Search courses, lessons, features"
-                  className="rounded-full pl-10 h-9 text-sm"
+                  className="rounded-full pl-10 h-9 text-sm text-white"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {searchSuggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
-                    className="flex items-center gap-2.5 p-2.5 rounded-md border border-border bg-muted/40 hover:bg-muted/60 transition text-sm text-muted-foreground w-full"
+                    className="flex items-center gap-2.5 p-2.5 rounded-md border border-border bg-muted/40 hover:bg-muted/60 transition text-sm text-white w-full"
                   >
-                    <suggestion.icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <suggestion.icon className="h-4 w-4 text-white flex-shrink-0" />
                     <span className="truncate">{suggestion.label}</span>
                   </button>
                 ))}
@@ -258,7 +247,6 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
 
       {/* HEADER */}
       <header className="fixed top-0 left-0 w-full z-50 transition-all duration-300">
-        {/* Main header container */}
         <div
           className={`flex items-center justify-between px-4 lg:px-8 backdrop-blur-lg transition-all duration-300 ${
             isTop ? "h-14 lg:h-14" : "h-12 lg:h-12"
@@ -271,11 +259,7 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden h-8 w-8 rounded-md border border-white/10 bg-white/5 flex items-center justify-center hover:bg-white/10 transition"
             >
-              {mobileMenuOpen ? (
-                <X className="h-4 w-4 text-white" />
-              ) : (
-                <Menu className="h-4 w-4 text-white" />
-              )}
+              {mobileMenuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
             </button>
 
             <LeLoLogo />
@@ -285,14 +269,10 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                 {bottomNavLinks.map(link => (
                   <button
                     key={link.label}
-                    ref={el => {
-                      if (el) navRefs.current[link.view] = el
-                    }}
+                    ref={el => { if (el) navRefs.current[link.view] = el }}
                     onClick={() => handleNavClick(link.view)}
                     className={`relative text-sm transition whitespace-nowrap ${
-                      activeTab === link.view
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
+                      activeTab === link.view ? "text-white" : "text-white/60 hover:text-white"
                     }`}
                   >
                     {link.label}
@@ -300,7 +280,7 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                 ))}
                 <span
                   ref={underlineRef}
-                  className="absolute bottom-[-4px] h-[2px] bg-foreground transition-all duration-300 ease-out"
+                  className="absolute bottom-[-4px] h-[2px] bg-white transition-all duration-300 ease-out"
                   style={{ left: 0, width: 0 }}
                 />
               </div>
@@ -310,39 +290,41 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
           {/* Right side icons */}
           {isTop && (
             <div className="flex items-center gap-2 sm:gap-4">
+              {/* Search */}
               <div
                 onClick={() => setSearchOpen(true)}
-                className="hidden sm:flex items-center gap-2 px-3 h-8 w-32 md:w-64 rounded-full border border-border bg-muted/40 text-sm text-muted-foreground hover:text-white hover:bg-muted/60 cursor-pointer transition"
+                className="hidden sm:flex items-center gap-2 px-3 h-8 w-32 md:w-64 rounded-full border border-border bg-muted/40 text-sm text-white hover:text-white hover:bg-muted/60 cursor-pointer transition"
               >
-                <Search className="h-3.5 w-3.5 text-gray-400" />
+                <Search className="h-3.5 w-3.5 text-white" />
                 <span className="hidden md:block flex-1 text-left text-white">Search</span>
-                <span className="hidden md:block text-xs text-gray-400">F</span>
+                <span className="hidden md:block text-xs text-white">F</span>
               </div>
-
               <button
                 onClick={() => setSearchOpen(true)}
                 className="sm:hidden h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition"
               >
-                <Search className="h-3.5 w-3.5 text-gray-400" />
+                <Search className="h-3.5 w-3.5 text-white" />
               </button>
 
               <div className="hidden sm:block h-5 border-l border-border/50" />
 
+              {/* Notifications */}
               <button
                 onClick={() => setNotifOpen(v => !v)}
                 className="h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition"
               >
-                <Bell className="h-3.5 w-3.5 text-gray-400" />
+                <Bell className="h-3.5 w-3.5 text-white" />
               </button>
 
               <div className="hidden sm:block h-5 border-l border-border/50" />
 
               <IconButton className="hidden sm:flex">
-                <LifeBuoy className="h-3.5 w-3.5 text-gray-400" />
+                <LifeBuoy className="h-3.5 w-3.5 text-white" />
               </IconButton>
 
               <div className="hidden sm:block h-5 border-l border-border/50" />
 
+              {/* Profile */}
               <div className="relative" ref={profileRef}>
                 {user && (
                   <div
@@ -356,37 +338,10 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                         className="h-6 w-6 rounded-full"
                       />
                     ) : (
-                      <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-semibold">
+                      <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-semibold text-white">
                         {user.user_metadata?.full_name?.[0] || user.email?.[0] || "U"}
                       </div>
                     )}
-                  </div>
-                )}
-
-                {profileOpen && user && (
-                  <div className="absolute right-0 mt-2 w-72 rounded-md border bg-card shadow-lg overflow-hidden">
-                    <div className="px-4 py-3 border-b">
-                      <p className="text-sm font-medium">
-                        {user.user_metadata?.full_name || "User"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
-                    </div>
-                    <div className="p-1">
-                      <ProfileItem label="Dashboard" onClick={() => handleNavClick("overview")} />
-                      <ProfileItem label="Account settings" onClick={() => handleNavClick("settings")} />
-                      <ProfileItem
-                        label="Browse courses"
-                        onClick={() => handleNavClick("courses")}
-                        rightIcon={Search}
-                      />
-                    </div>
-                    <div className="border-t p-1">
-                      <ProfileItem label="Home page" href="/" rightIcon={Home} />
-                      <ProfileItem label="Log out" onClick={handleLogout} rightIcon={LogOut} />
-                    </div>
-                    <div className="p-3 border-t">
-                      <Button className="w-full h-8 text-sm">Upgrade to Pro</Button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -394,21 +349,17 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
           )}
         </div>
 
-        {/* Bottom navbar normal - hidden on mobile */}
+        {/* Bottom navbar */}
         {isTop && (
           <div className="relative hidden lg:block">
             <div className="flex gap-6 mt-3 px-8">
               {bottomNavLinks.map(link => (
                 <button
                   key={link.label}
-                  ref={el => {
-                    if (el) navRefs.current[link.view] = el
-                  }}
+                  ref={el => { if (el) navRefs.current[link.view] = el }}
                   onClick={() => handleNavClick(link.view)}
                   className={`relative text-sm transition whitespace-nowrap ${
-                    activeTab === link.view
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                    activeTab === link.view ? "text-white" : "text-white/60 hover:text-white"
                   }`}
                 >
                   {link.label}
@@ -418,14 +369,14 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
             <div className="relative h-[2px] bg-border mt-2">
               <span
                 ref={underlineRef}
-                className="absolute bottom-0 h-[2px] bg-foreground transition-all duration-300 ease-out"
+                className="absolute bottom-0 h-[2px] bg-white transition-all duration-300 ease-out"
                 style={{ left: 0, width: 0 }}
               />
             </div>
           </div>
         )}
 
-        {/* MOBILE NAVIGATION DRAWER */}
+        {/* Mobile menu drawer */}
         <div
           ref={mobileMenuRef}
           className={`fixed top-0 left-0 h-full w-64 bg-black border-r border-white/10 z-50 transform transition-transform duration-300 lg:hidden ${
@@ -435,7 +386,6 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
           <div className="p-4 border-b border-white/10">
             <LeLoLogo />
           </div>
-
           <nav className="p-4">
             <div className="space-y-1">
               {bottomNavLinks.map(link => (
@@ -452,7 +402,6 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                 </button>
               ))}
             </div>
-
             {user && (
               <>
                 <div className="my-4 border-t border-white/10" />
@@ -492,36 +441,61 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                   key={tab}
                   onClick={() => setNotifTab(tab)}
                   className={`flex-1 text-center py-2 text-sm ${
-                    notifTab === tab
-                      ? "border-b-2 border-white text-white"
-                      : "text-gray-400 hover:text-white"
+                    notifTab === tab ? "border-b-2 border-white text-white" : "text-gray-400 hover:text-white"
                   } transition`}
                 >
                   {tab}
                 </button>
               ))}
             </div>
-
             <div className="max-h-56 overflow-y-auto p-2 space-y-1">
               {notifications.map((notif, idx) => (
-                <div
-                  key={idx}
-                  className="px-3 py-2 rounded-md hover:bg-gray-800 transition flex flex-col"
-                >
+                <div key={idx} className="px-3 py-2 rounded-md hover:bg-gray-800 transition flex flex-col">
                   <span className="text-white text-sm">{notif.title}</span>
                   <span className="text-xs text-gray-500 mt-0.5">{notif.time}</span>
                 </div>
               ))}
             </div>
-
             <div className="p-2 border-t border-border/50">
-              <Button className="w-full h-8 text-sm">
-                {notifTab === "Inbox" ? "Archive" : "Delete"}
-              </Button>
+              <Button className="w-full h-8 text-sm">{notifTab === "Inbox" ? "Archive" : "Delete"}</Button>
             </div>
           </div>
         )}
       </header>
+
+            {/* PROFILE DROPDOWN OUTSIDE HEADER for correct stacking */}
+      {profileOpen && user && profileRef.current && (
+        <div
+          className="absolute z-50 w-72 rounded-md border bg-card shadow-lg overflow-hidden"
+          style={{
+            top: profileRef.current.getBoundingClientRect().bottom + window.scrollY + 4,
+            left: profileRef.current.getBoundingClientRect().right - 288, // width of dropdown
+          }}
+        >
+          <div className="px-4 py-3 border-b">
+            <p className="text-sm font-medium text-white">
+              {user.user_metadata?.full_name || "User"}
+            </p>
+            <p className="text-xs text-gray-400">{user.email}</p>
+          </div>
+          <div className="p-1">
+            <ProfileItem label="Dashboard" onClick={() => handleNavClick("overview")} />
+            <ProfileItem label="Account settings" onClick={() => handleNavClick("settings")} />
+            <ProfileItem
+              label="Browse courses"
+              onClick={() => handleNavClick("courses")}
+              rightIcon={Search}
+            />
+          </div>
+          <div className="border-t p-1">
+            <ProfileItem label="Home page" href="/" rightIcon={Home} />
+            <ProfileItem label="Log out" onClick={handleLogout} rightIcon={LogOut} />
+          </div>
+          <div className="p-3 border-t">
+            <Button className="w-full h-8 text-sm">Upgrade to Pro</Button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -555,14 +529,15 @@ function ProfileItem({
 }) {
   return (
     <button
-      className="w-full text-left px-3 py-2 rounded-md text-sm text-gray-300 hover:bg-muted/60 hover:text-white transition flex items-center justify-between"
+      className="w-full text-left px-3 py-2 rounded-md text-sm text-white hover:bg-muted/60 hover:text-white transition flex items-center justify-between"
       onClick={() => {
         if (href) window.location.href = href
         if (onClick) onClick()
       }}
     >
       {label}
-      {Icon && <Icon className="h-3.5 w-3.5" />}
+      {Icon && <Icon className="h-3.5 w-3.5 text-white" />}
     </button>
   )
 }
+

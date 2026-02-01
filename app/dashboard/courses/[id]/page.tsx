@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useRef } from "react"
+import { Suspense, useEffect, useMemo, useState, useRef } from "react"
 import { GeistSans } from "geist/font/sans"
 import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
@@ -24,14 +24,17 @@ import {
   markLessonComplete,
   startCourse,
   unmarkLessonComplete,
-  updateCourseProgress
+  updateCourseProgress,
+  getCourseChapters,
+  recalculateProgress
 } from "@/lib/supabaseApi"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 
-type LessonChapter = {
+type CourseChapter = {
   id: string
   title: string
-  timestamp_seconds: number
+  order_index: number
+  course_id: string
 }
 
 type Lesson = {
@@ -41,7 +44,7 @@ type Lesson = {
   video_url: string
   duration_minutes: number
   order_index: number
-  chapters?: LessonChapter[]
+  chapter_id: string | null
 }
 
 type Course = {
@@ -56,36 +59,26 @@ type Course = {
   lessons: Lesson[]
 }
 
-export default function CoursePlayerPage() {
+function CoursePlayerContent() {
   const params = useParams()
   const router = useRouter()
   const supabase = getSupabaseClient()
   const courseId = params?.id as string
 
   const [course, setCourse] = useState<Course | null>(null)
+  const [chapters, setChapters] = useState<CourseChapter[]>([])
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null)
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set())
   const [progress, setProgress] = useState(0)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(["main"]))
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     async function getUser() {
-      const fakeUser = localStorage.getItem("fake_user")
-      if (fakeUser) {
-        try {
-          const parsed = JSON.parse(fakeUser)
-          setUserId(parsed.id)
-          return
-        } catch {
-          localStorage.removeItem("fake_user")
-        }
-      }
-
       const res = await supabase.auth.getSession()
       const user = res.data?.session?.user
       if (!user) {
@@ -121,6 +114,16 @@ export default function CoursePlayerPage() {
 
       setCurrentLesson(lessons[0] || null)
 
+      // Load chapters
+      const { data: chaptersData } = await getCourseChapters(courseId)
+      if (chaptersData) {
+        const sortedChapters = chaptersData.sort((a, b) => a.order_index - b.order_index)
+        setChapters(sortedChapters)
+        
+        // Expand all chapters by default
+        setExpandedChapters(new Set(sortedChapters.map(c => c.id)))
+      }
+
       if (userId) {
         let { data: progressData } = await getCourseProgress(userId, courseId)
         if (!progressData) {
@@ -153,6 +156,27 @@ export default function CoursePlayerPage() {
     return [...course.lessons].sort((a, b) => a.order_index - b.order_index)
   }, [course])
 
+  // Group lessons by chapter
+  const lessonsByChapter = useMemo(() => {
+    const grouped: { [key: string]: Lesson[] } = {
+      unassigned: []
+    }
+    
+    chapters.forEach(chapter => {
+      grouped[chapter.id] = []
+    })
+
+    sortedLessons.forEach(lesson => {
+      if (lesson.chapter_id && grouped[lesson.chapter_id]) {
+        grouped[lesson.chapter_id].push(lesson)
+      } else {
+        grouped.unassigned.push(lesson)
+      }
+    })
+
+    return grouped
+  }, [sortedLessons, chapters])
+
   const currentIndex = sortedLessons.findIndex(
     (lesson) => lesson.id === currentLesson?.id
   )
@@ -174,15 +198,7 @@ export default function CoursePlayerPage() {
     }
   }
 
-  async function handleChapterJump(timestamp_seconds: number) {
-    if (videoRef.current) {
-      videoRef.current.currentTime = timestamp_seconds
-      videoRef.current.play()
-      setIsPlaying(true)
-    }
-  }
-
-  async function handleVideoCompleteToggle() {
+  async function handleToggleComplete() {
     if (!currentLesson || !userId) return
 
     const lessonId = currentLesson.id
@@ -190,7 +206,6 @@ export default function CoursePlayerPage() {
 
     if (isCompleted) {
       await unmarkLessonComplete(userId, lessonId)
-
       setCompletedLessons((prev) => {
         const s = new Set(prev)
         s.delete(lessonId)
@@ -198,28 +213,46 @@ export default function CoursePlayerPage() {
       })
     } else {
       await markLessonComplete(userId, lessonId, courseId)
-
       setCompletedLessons((prev) => new Set([...prev, lessonId]))
-
-      if (nextLesson) {
-        await updateCourseProgress(userId, courseId, {
-          last_lesson_id: nextLesson.id,
-          last_accessed_at: new Date().toISOString()
-        })
-
-        setCurrentLesson(nextLesson)
-      }
     }
 
-    const { data: updatedProgress } = await getCourseProgress(userId, courseId)
-    if (updatedProgress) setProgress(updatedProgress.progress_percentage || 0)
+    // Recalculate progress
+    const { progress_percentage } = await recalculateProgress(userId, courseId)
+    setProgress(progress_percentage)
   }
 
-  function toggleModule(moduleId: string) {
-    setExpandedModules((prev) => {
+  async function handleMarkCompleteAndNext() {
+    if (!currentLesson || !userId) return
+
+    const lessonId = currentLesson.id
+    const isCompleted = completedLessons.has(lessonId)
+
+    if (!isCompleted) {
+      await markLessonComplete(userId, lessonId, courseId)
+      setCompletedLessons((prev) => new Set([...prev, lessonId]))
+    }
+
+    // Recalculate progress
+    const { progress_percentage } = await recalculateProgress(userId, courseId)
+    setProgress(progress_percentage)
+
+    if (nextLesson) {
+      await updateCourseProgress(userId, courseId, {
+        last_lesson_id: nextLesson.id,
+        last_accessed_at: new Date().toISOString()
+      })
+      setCurrentLesson(nextLesson)
+    }
+  }
+
+  function toggleChapter(chapterId: string) {
+    setExpandedChapters((prev) => {
       const newSet = new Set(prev)
-      if (newSet.has(moduleId)) newSet.delete(moduleId)
-      else newSet.add(moduleId)
+      if (newSet.has(chapterId)) {
+        newSet.delete(chapterId)
+      } else {
+        newSet.add(chapterId)
+      }
       return newSet
     })
   }
@@ -246,8 +279,7 @@ export default function CoursePlayerPage() {
     )
   }
 
-  const isCurrentCompleted =
-    currentLesson && completedLessons.has(currentLesson.id)
+  const isCurrentCompleted = currentLesson && completedLessons.has(currentLesson.id)
 
   return (
     <div className={`${GeistSans.className} min-h-screen bg-black text-white`}>
@@ -324,27 +356,75 @@ export default function CoursePlayerPage() {
               </div>
 
               <nav className="max-h-[calc(100vh-16rem)] overflow-y-auto px-2 py-3">
-                <button
-                  onClick={() => toggleModule("main")}
-                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-[0.2em]"
-                >
-                  <span>Course content</span>
-                  {expandedModules.has("main") ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
+                {/* Chapters */}
+                {chapters.map((chapter) => {
+                  const chapterLessons = lessonsByChapter[chapter.id] || []
+                  const isExpanded = expandedChapters.has(chapter.id)
+                  
+                  return (
+                    <div key={chapter.id} className="mb-2">
+                      <button
+                        onClick={() => toggleChapter(chapter.id)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-white/70 uppercase tracking-[0.2em] hover:text-white transition"
+                      >
+                        <span>Chapter {chapter.order_index + 1}: {chapter.title}</span>
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </button>
 
-                {expandedModules.has("main") && (
-                  <div className="mt-2 space-y-1">
-                    {sortedLessons.map((lesson) => {
-                      const isCompleted = completedLessons.has(lesson.id)
-                      const isCurrent = currentLesson?.id === lesson.id
+                      {isExpanded && (
+                        <div className="mt-1 space-y-1 pl-2">
+                          {chapterLessons.map((lesson) => {
+                            const isCompleted = completedLessons.has(lesson.id)
+                            const isCurrent = currentLesson?.id === lesson.id
 
-                      return (
-                        <div key={lesson.id}>
+                            return (
+                              <button
+                                key={lesson.id}
+                                onClick={() => handleLessonSelect(lesson)}
+                                className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-3 ${
+                                  isCurrent
+                                    ? "bg-white/10 text-white"
+                                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                                }`}
+                              >
+                                <div className="flex-shrink-0">
+                                  {isCompleted ? (
+                                    <div className="h-4 w-4 rounded-full bg-green-500/20 flex items-center justify-center">
+                                      <Check className="h-2.5 w-2.5 text-green-500 stroke-[3]" />
+                                    </div>
+                                  ) : (
+                                    <Circle className={`h-4 w-4 ${isCurrent ? "text-white" : "text-white/20"}`} />
+                                  )}
+                                </div>
+
+                                <span className="text-[13px] truncate">{lesson.title}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Unassigned Lessons */}
+                {lessonsByChapter.unassigned?.length > 0 && (
+                  <div className="mt-4">
+                    <p className="px-3 py-2 text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">
+                      Other Lessons
+                    </p>
+                    <div className="mt-1 space-y-1">
+                      {lessonsByChapter.unassigned.map((lesson) => {
+                        const isCompleted = completedLessons.has(lesson.id)
+                        const isCurrent = currentLesson?.id === lesson.id
+
+                        return (
                           <button
+                            key={lesson.id}
                             onClick={() => handleLessonSelect(lesson)}
                             className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-3 ${
                               isCurrent
@@ -364,27 +444,9 @@ export default function CoursePlayerPage() {
 
                             <span className="text-[13px] truncate">{lesson.title}</span>
                           </button>
-
-                          {/* Chapters */}
-                          {lesson.chapters?.length && isCurrent ? (
-                            <div className="ml-5 mt-1 space-y-1">
-                              {lesson.chapters.map((chapter) => (
-                                <button
-                                  key={chapter.id}
-                                  onClick={() => handleChapterJump(chapter.timestamp_seconds)}
-                                  className="flex items-center justify-between w-full px-2 py-1 text-xs text-white/50 hover:text-white hover:bg-white/5 rounded"
-                                >
-                                  <span>{chapter.title}</span>
-                                  <span>{Math.floor(chapter.timestamp_seconds / 60)}:
-                                    {(chapter.timestamp_seconds % 60).toString().padStart(2, "0")}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
               </nav>
@@ -454,20 +516,53 @@ export default function CoursePlayerPage() {
                 </div>
 
                 <div className="p-5 lg:p-6 border-t border-white/10">
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-white/40">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      {currentLesson?.duration_minutes || 0} min
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Award className="h-3.5 w-3.5" />
-                      {course.difficulty}
-                    </span>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">{currentLesson?.title}</h2>
+                    <div className="flex items-center gap-3 text-xs text-white/40">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        {currentLesson?.duration_minutes || 0} min
+                      </span>
+                    </div>
                   </div>
 
-                  <p className="text-base text-white/70 mt-4 leading-relaxed">
+                  <p className="text-sm text-white/60 leading-relaxed mb-6">
                     {currentLesson?.description || "No description available for this lesson."}
                   </p>
+
+                  {/* Completion Controls */}
+                  <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-white/10">
+                    <Button
+                      onClick={handleToggleComplete}
+                      variant={isCurrentCompleted ? "outline" : "default"}
+                      size="sm"
+                      className={isCurrentCompleted ? "border-green-500/50 text-green-400 hover:bg-green-500/10" : ""}
+                    >
+                      {isCurrentCompleted ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Mark as Incomplete
+                        </>
+                      ) : (
+                        <>
+                          <Circle className="h-4 w-4 mr-2" />
+                          Mark as Complete
+                        </>
+                      )}
+                    </Button>
+
+                    {nextLesson && (
+                      <Button
+                        onClick={handleMarkCompleteAndNext}
+                        variant="default"
+                        size="sm"
+                        className="bg-white text-black hover:bg-white/90"
+                      >
+                        Complete & Continue
+                        <ChevronDown className="h-4 w-4 ml-2 rotate-[-90deg]" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
@@ -475,5 +570,17 @@ export default function CoursePlayerPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CoursePlayerPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white" />
+      </div>
+    }>
+      <CoursePlayerContent />
+    </Suspense>
   )
 }
