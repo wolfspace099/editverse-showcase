@@ -1,36 +1,64 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { LeLoLogo } from "@/components/lelo-logo"
 import { FaDiscord } from "react-icons/fa"
 import { getSupabaseClient } from "@/lib/supabaseClient"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { GeistSans } from "geist/font/sans"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = getSupabaseClient()
   const [loading, setLoading] = useState(false)
   const [showSignIn, setShowSignIn] = useState(false)
+  const authError =
+    searchParams?.get("error_description") ||
+    searchParams?.get("error") ||
+    ""
+
+  // Check if already logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        router.replace('/dashboard')
+      }
+    }
+    checkUser()
+  }, [supabase, router])
 
   const handleDiscordLogin = async () => {
     setLoading(true)
 
     try {
+      // Clear any existing session first
+      await supabase.auth.signOut()
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "discord",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-          scopes: "identify email"
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: "identify email",
+          skipBrowserRedirect: false,
         }
       })
 
-      if (error) throw error
+      if (error) {
+        console.error("OAuth error:", error)
+        setLoading(false)
+        return
+      }
 
-      if (data.url) window.location.href = data.url
+      // The redirect will happen automatically
+      if (data?.url) {
+        console.log("Redirecting to Discord...")
+        window.location.href = data.url
+      }
     } catch (err) {
-      console.error(err)
+      console.error("Login error:", err)
       setLoading(false)
     }
   }
@@ -64,7 +92,13 @@ export default function LoginPage() {
           </p>
 
           <div className="space-y-4">
-
+            {authError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {authError === "no_code" && "Authentication failed: No authorization code received"}
+                {authError === "no_session" && "Authentication failed: Could not create session"}
+                {authError !== "no_code" && authError !== "no_session" && authError}
+              </div>
+            )}
             <Button
               onClick={handleDiscordLogin}
               disabled={loading}

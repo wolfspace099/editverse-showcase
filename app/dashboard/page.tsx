@@ -6,15 +6,7 @@ import { Header } from "@/components/dashboard/header"
 import OverviewContent from "@/components/dashboard/overview-content"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getSupabaseClient } from "@/lib/supabaseClient"
-
-type User = {
-  id: string
-  email?: string
-  user_metadata?: {
-    full_name?: string
-    avatar_url?: string
-  }
-}
+import type { User } from "@supabase/supabase-js"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -23,7 +15,6 @@ export default function DashboardPage() {
   
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [authReady, setAuthReady] = useState(false)
 
   // Page state
   const [page, setPage] = useState<string>("overview")
@@ -32,7 +23,6 @@ export default function DashboardPage() {
   useEffect(() => {
     const courseParam = searchParams?.get("course")
     if (courseParam) {
-      // Redirect to unified courses player
       router.replace(`/dashboard/courses/${courseParam}`)
       return
     }
@@ -41,70 +31,56 @@ export default function DashboardPage() {
     setPage(pageParam)
   }, [searchParams, router])
 
-  useEffect(() => {
-    let active = true
-
-    async function exchangeAuthCode() {
-      const code = searchParams?.get("code")
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          console.error(error)
-        }
-        router.replace("/dashboard")
-      }
-
-      if (active) {
-        setAuthReady(true)
-      }
-    }
-
-    exchangeAuthCode()
-
-    return () => {
-      active = false
-    }
-  }, [searchParams, supabase, router])
-
   // Check authentication
   useEffect(() => {
-    if (!authReady) return
-
     let mounted = true
 
-    async function resolveUser() {
-      const fakeUserRaw =
-        typeof window !== "undefined"
-          ? localStorage.getItem("fake_user")
-          : null
+    async function checkAuth() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (!mounted) return
 
-      if (fakeUserRaw) {
-        try {
-          const fakeUser = JSON.parse(fakeUserRaw)
-          if (fakeUser?.id && mounted) {
-            setUser(fakeUser)
-            setLoading(false)
-            return
-          }
-        } catch {
-          localStorage.removeItem("fake_user")
+        if (error) {
+          console.error("Session error:", error)
+          router.replace("/login")
+          return
+        }
+
+        if (!session?.user) {
+          router.replace("/login")
+          return
+        }
+
+        setUser(session.user)
+        setLoading(false)
+      } catch (err) {
+        console.error("Auth check error:", err)
+        if (mounted) {
+          router.replace("/login")
         }
       }
-
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!mounted) return
-
-      if (!session?.user) {
-        router.replace("/login")
-        return
-      }
-
-      setUser(session.user)
-      setLoading(false)
     }
 
-    resolveUser()
-  }, [authReady, supabase, router])
+    checkAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return
+      
+      if (!session?.user) {
+        router.replace("/login")
+      } else {
+        setUser(session.user)
+        setLoading(false)
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [supabase, router])
 
   if (loading) {
     return (

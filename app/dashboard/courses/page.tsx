@@ -41,8 +41,23 @@ export default function CoursesPage() {
 
     resolveUser()
 
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return
+
+        if (!session?.user) {
+          router.replace("/login")
+          return
+        }
+
+        setUser(session.user)
+        setLoading(false)
+      }
+    )
+
     return () => {
       mounted = false
+      subscription.subscription.unsubscribe()
     }
   }, [supabase, router])
 
