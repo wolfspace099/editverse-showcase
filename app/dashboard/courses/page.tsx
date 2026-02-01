@@ -22,30 +22,12 @@ export default function CoursesPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Auth lookup
   useEffect(() => {
     let mounted = true
 
     async function resolveUser() {
-      const fakeUserRaw =
-        typeof window !== "undefined"
-          ? localStorage.getItem("fake_user")
-          : null
-
-      if (fakeUserRaw) {
-        try {
-          const fakeUser = JSON.parse(fakeUserRaw)
-          if (fakeUser?.id && mounted) {
-            setUser(fakeUser)
-            setLoading(false)
-            return
-          }
-        } catch {
-          localStorage.removeItem("fake_user")
-        }
-      }
-
       const { data: { session } } = await supabase.auth.getSession()
+
       if (!mounted) return
 
       if (!session?.user) {
@@ -66,7 +48,9 @@ export default function CoursesPage() {
 
   if (loading) {
     return (
-      <div className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center`}>
+      <div
+        className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center`}
+      >
         <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white" />
       </div>
     )
@@ -78,7 +62,6 @@ export default function CoursesPage() {
     <div className={`${GeistSans.className} min-h-screen bg-black text-white flex flex-col`}>
       <Header currentView="courses" />
 
-      {/* Courses catalog */}
       <main className="flex-1 pt-28 lg:pt-36 pb-20">
         <CoursesContent userId={user.id} />
       </main>

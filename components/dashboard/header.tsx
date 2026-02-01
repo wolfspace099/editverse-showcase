@@ -52,11 +52,10 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
   const navRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const underlineRef = useRef<HTMLSpanElement>(null)
 
-  // Sync active tab with currentView prop and query param
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
-    const pageParam = searchParams.get('page')
-    
+    const pageParam = searchParams.get("page")
+
     if (pageParam) {
       setActiveTab(pageParam)
     } else if (currentView) {
@@ -66,127 +65,116 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
     }
   }, [currentView])
 
-  // Scroll detection
   useEffect(() => {
     const handleScroll = () => {
       setIsTop(window.scrollY < 50)
     }
+
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Load user (check both fake and real auth)
   useEffect(() => {
-    loadUser()
-  }, [supabase])
+    let mounted = true
 
-  async function loadUser() {
-    // Check for fake user first
-    const fakeUser = localStorage.getItem('fake_user')
-    if (fakeUser) {
-      try {
-        const parsed = JSON.parse(fakeUser)
-        setUser(parsed)
-        return
-      } catch (e) {
-        localStorage.removeItem('fake_user')
-      }
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (!mounted) return
+      setUser((data.session?.user as User) ?? null)
     }
 
-    // Check real Supabase auth
-    supabase.auth.getSession().then(res => {
-      setUser((res.data?.session?.user as User) ?? null)
-    })
-    
-    const { data: authListener } =
-      supabase.auth.onAuthStateChange((_event, session) => {
-        setUser((session?.user as User) ?? null)
-      })
-    
-    return () => authListener.subscription.unsubscribe()
-  }
+    loadUser()
 
-  // Keyboard shortcuts
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser((session?.user as User) ?? null)
+      }
+    )
+
+    return () => {
+      mounted = false
+      subscription.subscription.unsubscribe()
+    }
+  }, [supabase])
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey) {
         const target = e.target as HTMLElement
-        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
           e.preventDefault()
           setSearchOpen(true)
         }
       }
+
       if (e.key === "Escape") {
         setSearchOpen(false)
         setMobileMenuOpen(false)
       }
     }
+
     window.addEventListener("keydown", handleKey)
     return () => window.removeEventListener("keydown", handleKey)
   }, [])
 
-  // Click outside handlers
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setProfileOpen(false)
       }
+
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setNotifOpen(false)
       }
+
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         const target = event.target as HTMLElement
-        if (!target.closest('[data-mobile-menu-trigger]')) {
+        if (!target.closest("[data-mobile-menu-trigger]")) {
           setMobileMenuOpen(false)
         }
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Update underline position with smooth animation
   useEffect(() => {
     const updateUnderline = () => {
       const activeRef = navRefs.current[activeTab]
       if (activeRef && underlineRef.current) {
         const left = activeRef.offsetLeft
         const width = activeRef.offsetWidth
-        
+
         underlineRef.current.style.left = `${left}px`
         underlineRef.current.style.width = `${width}px`
       }
     }
-    
-    // Small delay to ensure DOM is ready
+
     setTimeout(updateUnderline, 50)
-    
+
     window.addEventListener("resize", updateUnderline)
     return () => window.removeEventListener("resize", updateUnderline)
   }, [activeTab, isTop])
 
-  // Prevent body scroll when mobile menu is open
   useEffect(() => {
     if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = "hidden"
     } else {
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = "unset"
     }
+
     return () => {
-      document.body.style.overflow = 'unset'
+      document.body.style.overflow = "unset"
     }
   }, [mobileMenuOpen])
 
   const handleLogout = async () => {
-    // Clear fake user
-    localStorage.removeItem('fake_user')
-    
-    // Clear real auth
     await supabase.auth.signOut()
-    
+
     setProfileOpen(false)
     setMobileMenuOpen(false)
-    router.push('/')
+    router.push("/")
   }
 
   const handleNavClick = (view: string) => {
@@ -197,13 +185,13 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
       onViewChange(view)
     }
 
-    if (view === 'overview') {
-      router.push('/dashboard?page=overview')
+    if (view === "overview") {
+      router.push("/dashboard?page=overview")
       return
     }
 
-    if (view === 'courses') {
-      router.push('/dashboard/courses')
+    if (view === "courses") {
+      router.push("/dashboard/courses")
       return
     }
 
@@ -262,7 +250,7 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
 
       {/* MOBILE MENU OVERLAY */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
@@ -278,7 +266,6 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
         >
           {/* Logo + Mobile Menu Button */}
           <div className="flex items-center gap-3">
-            {/* Hamburger menu button */}
             <button
               data-mobile-menu-trigger
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -293,7 +280,6 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
 
             <LeLoLogo />
 
-            {/* BOTTOM NAVBAR inline when scrolled - hidden on mobile */}
             {!isTop && (
               <div className="hidden lg:flex gap-6 relative">
                 {bottomNavLinks.map(link => (
@@ -324,7 +310,6 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
           {/* Right side icons */}
           {isTop && (
             <div className="flex items-center gap-2 sm:gap-4">
-              {/* Search */}
               <div
                 onClick={() => setSearchOpen(true)}
                 className="hidden sm:flex items-center gap-2 px-3 h-8 w-32 md:w-64 rounded-full border border-border bg-muted/40 text-sm text-muted-foreground hover:text-white hover:bg-muted/60 cursor-pointer transition"
@@ -358,7 +343,6 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
 
               <div className="hidden sm:block h-5 border-l border-border/50" />
 
-              {/* Profile */}
               <div className="relative" ref={profileRef}>
                 {user && (
                   <div
@@ -373,7 +357,7 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                       />
                     ) : (
                       <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-semibold">
-                        {user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U'}
+                        {user.user_metadata?.full_name?.[0] || user.email?.[0] || "U"}
                       </div>
                     )}
                   </div>
@@ -382,13 +366,19 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                 {profileOpen && user && (
                   <div className="absolute right-0 mt-2 w-72 rounded-md border bg-card shadow-lg overflow-hidden">
                     <div className="px-4 py-3 border-b">
-                      <p className="text-sm font-medium">{user.user_metadata?.full_name || "User"}</p>
+                      <p className="text-sm font-medium">
+                        {user.user_metadata?.full_name || "User"}
+                      </p>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                     <div className="p-1">
-                      <ProfileItem label="Dashboard" onClick={() => handleNavClick('overview')} />
-                      <ProfileItem label="Account settings" onClick={() => handleNavClick('settings')} />
-                      <ProfileItem label="Browse courses" onClick={() => handleNavClick('courses')} rightIcon={Search} />
+                      <ProfileItem label="Dashboard" onClick={() => handleNavClick("overview")} />
+                      <ProfileItem label="Account settings" onClick={() => handleNavClick("settings")} />
+                      <ProfileItem
+                        label="Browse courses"
+                        onClick={() => handleNavClick("courses")}
+                        rightIcon={Search}
+                      />
                     </div>
                     <div className="border-t p-1">
                       <ProfileItem label="Home page" href="/" rightIcon={Home} />
@@ -439,7 +429,7 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
         <div
           ref={mobileMenuRef}
           className={`fixed top-0 left-0 h-full w-64 bg-black border-r border-white/10 z-50 transform transition-transform duration-300 lg:hidden ${
-            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           <div className="p-4 border-b border-white/10">
@@ -469,7 +459,7 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                 <div className="space-y-1">
                   <button
                     onClick={() => {
-                      router.push('/')
+                      router.push("/")
                       setMobileMenuOpen(false)
                     }}
                     className="w-full flex items-center justify-between px-4 py-2.5 rounded-md text-sm text-white/60 hover:bg-white/5 hover:text-white transition"
@@ -536,9 +526,17 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
   )
 }
 
-function IconButton({ children, className = "" }: { children: React.ReactNode, className?: string }) {
+function IconButton({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
   return (
-    <button className={`h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition ${className}`}>
+    <button
+      className={`h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition ${className}`}
+    >
       {children}
     </button>
   )

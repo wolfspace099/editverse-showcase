@@ -1,9 +1,7 @@
 "use client"
 
-import { FC, useState } from "react"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
 import { LeLoLogo } from "@/components/lelo-logo"
 import { FaDiscord } from "react-icons/fa"
 import { getSupabaseClient } from "@/lib/supabaseClient"
@@ -16,35 +14,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showSignIn, setShowSignIn] = useState(false)
 
-  // TEMPORARY: Fake user for testing during Supabase maintenance
-  const handleFakeLogin = () => {
-    // Store fake user in localStorage
-    localStorage.setItem('fake_user', JSON.stringify({
-      id: 'fake-user-id-123',
-      email: 'authisbrokenduetomaintenance@supabase.com',
-      user_metadata: {
-        full_name: 'Fake User',
-        avatar_url: ''
-      }
-    }))
-    router.push('/dashboard')
-  }
-
-  // Real Discord login (currently commented out due to Supabase maintenance)
   const handleDiscordLogin = async () => {
     setLoading(true)
+
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "discord",
-        options: { 
+        options: {
           redirectTo: `${window.location.origin}/dashboard`,
-          scopes: "identify email" 
-        },
+          scopes: "identify email"
+        }
       })
 
       if (error) throw error
 
-      // Force redirect
       if (data.url) window.location.href = data.url
     } catch (err) {
       console.error(err)
@@ -63,6 +46,7 @@ export default function LoginPage() {
   return (
     <div className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center p-4`}>
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+
         {/* Left side - Login form */}
         <div className="flex flex-col justify-center px-8 md:px-12 py-12">
           <div className="w-32 h-24 mb-6">
@@ -70,37 +54,30 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-3xl font-bold mb-2">
-            {showSignIn ? 'Welcome back' : 'Welcome'}
+            {showSignIn ? "Welcome back" : "Welcome"}
           </h1>
+
           <p className="text-white/60 mb-8">
-            {showSignIn 
-              ? 'Sign in to access your account and continue learning.' 
-              : 'Log in to start your onboarding and request access to our assets and courses.'}
+            {showSignIn
+              ? "Sign in to access your account and continue learning."
+              : "Log in to start your onboarding and request access to our assets and courses."}
           </p>
 
           <div className="space-y-4">
-            {/* Real Discord Login */}
+
             <Button
               onClick={handleDiscordLogin}
               disabled={loading}
               className="w-full bg-white text-black hover:bg-white/90 rounded-lg h-12 flex items-center justify-center gap-2"
             >
-              {loading ? <Loader /> : (
+              {loading ? (
+                <Loader />
+              ) : (
                 <>
                   <FaDiscord className="w-5 h-5" />
                   Continue with Discord
                 </>
               )}
-            </Button>
-
-            {/* Backup/Test login */}
-            <Button
-              onClick={handleFakeLogin}
-              variant="outline"
-              className="w-full border-white/10 text-white/40 hover:text-white rounded-lg h-12 flex items-center justify-center gap-2"
-            >
-              <FaDiscord className="w-5 h-5 opacity-40" />
-              Continue with Discord (Test Mode)
             </Button>
 
             <p className="text-xs text-white/60 text-center">
@@ -129,12 +106,13 @@ export default function LoginPage() {
 
             <div className="pt-4">
               <button
-                onClick={() => router.push('/')}
+                onClick={() => router.push("/")}
                 className="text-sm text-white/60 hover:text-white transition"
               >
                 ← Back to home
               </button>
             </div>
+
           </div>
         </div>
 
@@ -157,6 +135,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
+
       </div>
 
       <style jsx>{`

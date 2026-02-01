@@ -255,6 +255,7 @@ CREATE POLICY "Users can update own profile" ON profiles
 CREATE POLICY "Admins can view all profiles" ON profiles
   FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
 
+-- Function to handle new users and create a profile
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -262,15 +263,21 @@ BEGIN
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
+    -- Use full_name if present, fallback to empty string
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
     NEW.raw_user_meta_data->>'avatar_url'
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO NOTHING; -- avoid duplicates if trigger fires multiple times
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop existing trigger if exists
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- Create trigger to run after a new auth user is inserted
 CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
-FOR EACH ROW EXECUTE PROCEDURE handle_new_user();
+FOR EACH ROW
+EXECUTE PROCEDURE handle_new_user();
