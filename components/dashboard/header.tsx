@@ -205,35 +205,43 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
       {/* SEARCH MODAL */}
       {searchOpen && (
         <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/40 flex items-start justify-center pt-24 px-4">
-          <Card className="w-full max-w-xl relative rounded-lg">
+          <div
+            className="w-full max-w-xl relative rounded-lg overflow-hidden"
+            style={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)" }}
+          >
             <button
-              className="absolute top-3 right-3 bg-muted/60 px-2.5 py-1 rounded border border-border text-[11px] text-muted-foreground hover:bg-muted/80 transition"
+              className="absolute top-3 right-3 px-2.5 py-1 rounded text-[11px] text-white/40 hover:text-white/60 transition"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
               onClick={() => setSearchOpen(false)}
             >
               ESC
             </button>
-            <CardContent className="p-4 space-y-3">
+            <div className="p-4 space-y-3">
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
                 <Input
                   autoFocus
                   placeholder="Search courses, lessons, features"
-                  className="rounded-full pl-10 h-9 text-sm text-white"
+                  className="rounded-full pl-10 h-9 text-sm text-white placeholder:text-white/40 focus:ring-0"
+                  style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {searchSuggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
-                    className="flex items-center gap-2.5 p-2.5 rounded-md border border-border bg-muted/40 hover:bg-muted/60 transition text-sm text-white w-full"
+                    className="flex items-center gap-2.5 p-2.5 rounded-md text-sm text-white w-full transition"
+                    style={{ backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
                   >
-                    <suggestion.icon className="h-4 w-4 text-white flex-shrink-0" />
+                    <suggestion.icon className="h-4 w-4 text-white/60 flex-shrink-0" />
                     <span className="truncate">{suggestion.label}</span>
                   </button>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
 
@@ -246,9 +254,9 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
       )}
 
       {/* HEADER */}
-      <header className="fixed top-0 left-0 w-full z-50 transition-all duration-300">
+      <header className="fixed top-0 left-0 w-full z-50 transition-all duration-300" style={{ backgroundColor: "#0a0a0a" }}>
         <div
-          className={`flex items-center justify-between px-4 lg:px-8 backdrop-blur-lg transition-all duration-300 ${
+          className={`flex items-center justify-between px-4 lg:px-8 transition-all duration-300 ${
             isTop ? "h-14 lg:h-14" : "h-12 lg:h-12"
           }`}
         >
@@ -257,7 +265,10 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
             <button
               data-mobile-menu-trigger
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden h-8 w-8 rounded-md border border-white/10 bg-white/5 flex items-center justify-center hover:bg-white/10 transition"
+              className="lg:hidden h-8 w-8 rounded-md flex items-center justify-center transition"
+              style={{ border: "1px solid rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
             >
               {mobileMenuOpen ? <X className="h-4 w-4 text-white" /> : <Menu className="h-4 w-4 text-white" />}
             </button>
@@ -293,43 +304,60 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
               {/* Search */}
               <div
                 onClick={() => setSearchOpen(true)}
-                className="hidden sm:flex items-center gap-2 px-3 h-8 w-32 md:w-64 rounded-full border border-border bg-muted/40 text-sm text-white hover:text-white hover:bg-muted/60 cursor-pointer transition"
+                className="hidden sm:flex items-center gap-2 px-3 h-8 w-32 md:w-64 rounded-full cursor-pointer transition"
+                style={{ border: "1px solid rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
               >
-                <Search className="h-3.5 w-3.5 text-white" />
-                <span className="hidden md:block flex-1 text-left text-white">Search</span>
-                <span className="hidden md:block text-xs text-white">F</span>
+                <Search className="h-3.5 w-3.5 text-white/60" />
+                <span className="hidden md:block flex-1 text-left text-sm text-white/40">Search</span>
+                <span className="hidden md:block text-xs text-white/30">F</span>
               </div>
               <button
                 onClick={() => setSearchOpen(true)}
-                className="sm:hidden h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition"
+                className="sm:hidden h-8 w-8 rounded-full flex items-center justify-center transition"
+                style={{ border: "1px solid rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
               >
-                <Search className="h-3.5 w-3.5 text-white" />
+                <Search className="h-3.5 w-3.5 text-white/60" />
               </button>
 
-              <div className="hidden sm:block h-5 border-l border-border/50" />
+              <div className="hidden sm:block h-5 border-l border-white/10" />
 
               {/* Notifications */}
               <button
                 onClick={() => setNotifOpen(v => !v)}
-                className="h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition"
+                className="h-8 w-8 rounded-full flex items-center justify-center transition"
+                style={{ border: "1px solid rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
               >
-                <Bell className="h-3.5 w-3.5 text-white" />
+                <Bell className="h-3.5 w-3.5 text-white/60" />
               </button>
 
-              <div className="hidden sm:block h-5 border-l border-border/50" />
+              <div className="hidden sm:block h-5 border-l border-white/10" />
 
-              <IconButton className="hidden sm:flex">
-                <LifeBuoy className="h-3.5 w-3.5 text-white" />
-              </IconButton>
+              <button
+                className="hidden sm:flex h-8 w-8 rounded-full items-center justify-center transition"
+                style={{ border: "1px solid rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
+              >
+                <LifeBuoy className="h-3.5 w-3.5 text-white/60" />
+              </button>
 
-              <div className="hidden sm:block h-5 border-l border-border/50" />
+              <div className="hidden sm:block h-5 border-l border-white/10" />
 
               {/* Profile */}
               <div className="relative" ref={profileRef}>
                 {user && (
                   <div
-                    className="h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center cursor-pointer hover:bg-muted/60 transition"
+                    className="h-8 w-8 rounded-full flex items-center justify-center cursor-pointer transition"
+                    style={{ border: "1px solid rgba(255,255,255,0.08)", backgroundColor: "rgba(255,255,255,0.04)" }}
                     onClick={() => setProfileOpen(v => !v)}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
                   >
                     {user.user_metadata?.avatar_url ? (
                       <img
@@ -366,7 +394,7 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                 </button>
               ))}
             </div>
-            <div className="relative h-[2px] bg-border mt-2">
+            <div className="relative h-[2px] mt-2" style={{ backgroundColor: "rgba(255,255,255,0.06)" }}>
               <span
                 ref={underlineRef}
                 className="absolute bottom-0 h-[2px] bg-white transition-all duration-300 ease-out"
@@ -379,11 +407,12 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
         {/* Mobile menu drawer */}
         <div
           ref={mobileMenuRef}
-          className={`fixed top-0 left-0 h-full w-64 bg-black border-r border-white/10 z-50 transform transition-transform duration-300 lg:hidden ${
+          className={`fixed top-0 left-0 h-full w-64 z-50 transform transition-transform duration-300 lg:hidden ${
             mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
+          style={{ backgroundColor: "#0a0a0a", borderRight: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <div className="p-4 border-b border-white/10">
+          <div className="p-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <LeLoLogo />
           </div>
           <nav className="p-4">
@@ -394,9 +423,12 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
                   onClick={() => handleNavClick(link.view)}
                   className={`w-full text-left block px-4 py-2.5 rounded-md text-sm transition ${
                     activeTab === link.view
-                      ? "bg-white/10 text-white"
-                      : "text-white/60 hover:bg-white/5 hover:text-white"
+                      ? "text-white"
+                      : "text-white/60 hover:text-white"
                   }`}
+                  style={{ backgroundColor: activeTab === link.view ? "rgba(255,255,255,0.08)" : "transparent" }}
+                  onMouseEnter={(e) => { if (activeTab !== link.view) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)" }}
+                  onMouseLeave={(e) => { if (activeTab !== link.view) e.currentTarget.style.backgroundColor = "transparent" }}
                 >
                   {link.label}
                 </button>
@@ -404,21 +436,27 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
             </div>
             {user && (
               <>
-                <div className="my-4 border-t border-white/10" />
+                <div className="my-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
                 <div className="space-y-1">
                   <button
                     onClick={() => {
                       router.push("/")
                       setMobileMenuOpen(false)
                     }}
-                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-md text-sm text-white/60 hover:bg-white/5 hover:text-white transition"
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-md text-sm text-white/60 hover:text-white transition"
+                    style={{ backgroundColor: "transparent" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                   >
                     Home page
                     <Home className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-md text-sm text-white/60 hover:bg-white/5 hover:text-white transition"
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-md text-sm text-white/60 hover:text-white transition"
+                    style={{ backgroundColor: "transparent" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                   >
                     Log out
                     <LogOut className="h-3.5 w-3.5" />
@@ -433,16 +471,18 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
         {notifOpen && (
           <div
             ref={notifRef}
-            className="absolute top-14 right-4 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-border bg-card shadow-lg overflow-hidden z-50"
+            className="absolute top-14 right-4 w-80 max-w-[calc(100vw-2rem)] rounded-md overflow-hidden z-50"
+            style={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.06)", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}
           >
-            <div className="flex border-b border-border/50">
+            <div className="flex" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               {(["Inbox", "Archived"] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setNotifTab(tab)}
-                  className={`flex-1 text-center py-2 text-sm ${
-                    notifTab === tab ? "border-b-2 border-white text-white" : "text-gray-400 hover:text-white"
-                  } transition`}
+                  className={`flex-1 text-center py-2 text-sm transition ${
+                    notifTab === tab ? "text-white" : "text-white/40 hover:text-white/60"
+                  }`}
+                  style={{ borderBottom: notifTab === tab ? "2px solid white" : "2px solid transparent" }}
                 >
                   {tab}
                 </button>
@@ -450,33 +490,42 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
             </div>
             <div className="max-h-56 overflow-y-auto p-2 space-y-1">
               {notifications.map((notif, idx) => (
-                <div key={idx} className="px-3 py-2 rounded-md hover:bg-gray-800 transition flex flex-col">
+                <div
+                  key={idx}
+                  className="px-3 py-2 rounded-md flex flex-col cursor-pointer transition"
+                  style={{ backgroundColor: "transparent" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                >
                   <span className="text-white text-sm">{notif.title}</span>
-                  <span className="text-xs text-gray-500 mt-0.5">{notif.time}</span>
+                  <span className="text-xs text-white/30 mt-0.5">{notif.time}</span>
                 </div>
               ))}
             </div>
-            <div className="p-2 border-t border-border/50">
+            <div className="p-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               <Button className="w-full h-8 text-sm">{notifTab === "Inbox" ? "Archive" : "Delete"}</Button>
             </div>
           </div>
         )}
       </header>
 
-            {/* PROFILE DROPDOWN OUTSIDE HEADER for correct stacking */}
+      {/* PROFILE DROPDOWN OUTSIDE HEADER for correct stacking */}
       {profileOpen && user && profileRef.current && (
         <div
-          className="absolute z-50 w-72 rounded-md border bg-card shadow-lg overflow-hidden"
+          className="absolute z-50 w-72 rounded-md overflow-hidden"
           style={{
+            backgroundColor: "#0a0a0a",
+            border: "1px solid rgba(255,255,255,0.06)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
             top: profileRef.current.getBoundingClientRect().bottom + window.scrollY + 4,
-            left: profileRef.current.getBoundingClientRect().right - 288, // width of dropdown
+            left: profileRef.current.getBoundingClientRect().right - 288,
           }}
         >
-          <div className="px-4 py-3 border-b">
+          <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <p className="text-sm font-medium text-white">
               {user.user_metadata?.full_name || "User"}
             </p>
-            <p className="text-xs text-gray-400">{user.email}</p>
+            <p className="text-xs text-white/40">{user.email}</p>
           </div>
           <div className="p-1">
             <ProfileItem label="Dashboard" onClick={() => handleNavClick("overview")} />
@@ -487,32 +536,16 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
               rightIcon={Search}
             />
           </div>
-          <div className="border-t p-1">
+          <div className="p-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
             <ProfileItem label="Home page" href="/" rightIcon={Home} />
             <ProfileItem label="Log out" onClick={handleLogout} rightIcon={LogOut} />
           </div>
-          <div className="p-3 border-t">
+          <div className="p-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
             <Button className="w-full h-8 text-sm">Upgrade to Pro</Button>
           </div>
         </div>
       )}
     </>
-  )
-}
-
-function IconButton({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <button
-      className={`h-8 w-8 rounded-full border border-border bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition ${className}`}
-    >
-      {children}
-    </button>
   )
 }
 
@@ -529,15 +562,17 @@ function ProfileItem({
 }) {
   return (
     <button
-      className="w-full text-left px-3 py-2 rounded-md text-sm text-white hover:bg-muted/60 hover:text-white transition flex items-center justify-between"
+      className="w-full text-left px-3 py-2 rounded-md text-sm text-white/70 hover:text-white transition flex items-center justify-between"
+      style={{ backgroundColor: "transparent" }}
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
       onClick={() => {
         if (href) window.location.href = href
         if (onClick) onClick()
       }}
     >
       {label}
-      {Icon && <Icon className="h-3.5 w-3.5 text-white" />}
+      {Icon && <Icon className="h-3.5 w-3.5 text-white/40" />}
     </button>
   )
 }
-

@@ -3,17 +3,20 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { 
-  Search, 
-  MoreVertical,
-  ChevronDown,
+import {
+  Search,
   Grid3x3,
   List,
-  Play
+  ChevronDown,
+  Check,
+  Star,
+  BookOpen,
+  MoreHorizontal
 } from "lucide-react"
 import Link from "next/link"
 import { getAllCourses, getUserProgress, getUserStats } from "@/lib/supabaseApi"
 
+// ─── types ────────────────────────────────────────────────────────────────────
 type Course = {
   id: string
   title: string
@@ -24,13 +27,11 @@ type Course = {
   duration_minutes: number
   lessons_count: number
 }
-
 type UserProgress = {
   course_id: string
   progress_percentage: number
   courses: Course
 }
-
 type UserStats = {
   total_points: number
   courses_completed: number
@@ -39,304 +40,215 @@ type UserStats = {
   max_level: number
 }
 
-export default function OverviewContent({ userId }: { userId: string }) {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [courses, setCourses] = useState<Course[]>([])
-  const [userProgress, setUserProgress] = useState<UserProgress[]>([])
-  const [userStats, setUserStats] = useState<UserStats | null>(null)
-  const [loading, setLoading] = useState(true)
+// ─── constants ────────────────────────────────────────────────────────────────
+const BG       = "#0a0a0a"
+const BORDER   = "rgba(255,255,255,0.06)"
+const BORDER_H = "rgba(255,255,255,0.13)"
 
-  useEffect(() => {
-    loadData()
-  }, [userId])
+// ─────────────────────────────────────────────────────────────────────────────
+export default function OverviewContent({ userId }: { userId: string }) {
+  const [searchQuery,  setSearchQuery]  = useState("")
+  const [courses,      setCourses]      = useState<Course[]>([])
+  const [userProgress, setUserProgress] = useState<UserProgress[]>([])
+  const [userStats,    setUserStats]    = useState<UserStats | null>(null)
+  const [loading,      setLoading]      = useState(true)
+  const [expandStats,  setExpandStats]  = useState(false)
+
+  useEffect(() => { loadData() }, [userId])
 
   async function loadData() {
     setLoading(true)
+    const { data: coursesData }  = await getAllCourses({})
+    setCourses(coursesData?.slice(0, 6) || [])
 
-    // Load featured courses
-    const { data: coursesData } = await getAllCourses({})
-    setCourses(coursesData?.slice(0, 7) || [])
-
-    // Load user progress
     const { data: progressData } = await getUserProgress(userId)
     setUserProgress(progressData || [])
 
-    // Load user stats
-    const { data: statsData } = await getUserStats(userId)
+    const { data: statsData }    = await getUserStats(userId)
     setUserStats(statsData)
-
     setLoading(false)
   }
 
-  const inProgressCourses = userProgress.filter(p => 
-    p.progress_percentage > 0 && p.progress_percentage < 100
-  )
+  const getProgress = (courseId: string) =>
+    userProgress.find(p => p.course_id === courseId)?.progress_percentage ?? 0
 
-  const completedCourses = userProgress.filter(p => p.progress_percentage === 100)
+  const completedCourses  = userProgress.filter(p => p.progress_percentage === 100)
+  const inProgressCourses = userProgress.filter(p => p.progress_percentage > 0 && p.progress_percentage < 100)
+  const recentCourse = inProgressCourses[0]?.courses || completedCourses[0]?.courses || courses[0] || null
+
+  const statsRows = [
+    { label: "Course Points",     current: userStats?.total_points ?? 0,  total: 100, unit: "pts" },
+    { label: "Courses Completed", current: completedCourses.length,       total: 50,  unit: ""    },
+    { label: "In Progress",       current: inProgressCourses.length,      total: 20,  unit: ""    },
+    { label: "Learning Streak",   current: 3,                             total: 30,  unit: "d"   },
+    { label: "Total Hours",       current: 24,                            total: 200, unit: "h"   },
+    { label: "Achievements",      current: 7,                             total: 25,  unit: ""    },
+  ]
+  const visibleStats = expandStats ? statsRows : statsRows.slice(0, 4)
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
+    <div className="px-4 sm:px-6 lg:px-8 min-h-full">
       <div className="max-w-[1440px] mx-auto">
-        
-        {/* Search Bar */}
-        <div className="mb-8 lg:mb-10">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-              <Input
-                type="text"
-                placeholder="Search Courses..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 h-11 bg-transparent border border-white/10 rounded-md text-sm text-white placeholder:text-white/40 focus:border-white/30 focus:ring-0 transition-colors hover:border-white/20"
-              />
-            </div>
 
-            <div className="flex items-center gap-3">
-              <button className="p-2 hover:bg-white/5 rounded-md border border-white/10 transition-colors hidden sm:block">
-                <MoreVertical className="h-4 w-4 text-white/60" />
-              </button>
+        {/* ── top bar ────────────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 lg:mb-10">
+          <div className="relative w-full sm:flex-1 sm:max-w-2xl">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+            <Input
+              type="text"
+              placeholder="Search Projects…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 h-11 text-sm text-white placeholder:text-white/30 focus:ring-0"
+              style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}
+              onFocus={e  => (e.target.style.borderColor = BORDER_H)}
+              onBlur={e   => (e.target.style.borderColor = BORDER)}
+            />
+          </div>
 
-              <div className="flex items-center border border-white/10 rounded-md">
-                <button 
-                  onClick={() => setViewMode("grid")}
-                  className={`p-2 ${viewMode === "grid" ? "bg-white/10" : "hover:bg-white/5"} transition-colors`}
-                >
-                  <Grid3x3 className="h-4 w-4 text-white/60" />
-                </button>
-                <button 
-                  onClick={() => setViewMode("list")}
-                  className={`p-2 ${viewMode === "list" ? "bg-white/10" : "hover:bg-white/5"} transition-colors border-l border-white/10`}
-                >
-                  <List className="h-4 w-4 text-white/60" />
-                </button>
-              </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button className="h-11 w-11 rounded-md flex items-center justify-center"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "transparent" }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
+              <Grid3x3 className="h-4 w-4 text-white/50" />
+            </button>
+            <button className="h-11 w-11 rounded-md flex items-center justify-center"
+              style={{ border: `1px solid ${BORDER}`, backgroundColor: "transparent" }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
+              <List className="h-4 w-4 text-white/50" />
+            </button>
 
-              <Button 
-                size="sm"
-                className="h-11 bg-white text-black hover:bg-white/90 text-sm font-medium rounded-md px-5 hidden sm:block"
-              >
-                Add New...
+            <div className="flex items-center rounded-md overflow-hidden ml-1" style={{ border: `1px solid ${BORDER}` }}>
+              <Button size="sm" className="h-11 bg-white text-black hover:bg-white/90 text-sm font-medium rounded-none px-5">
+                Add New…
               </Button>
+              <button className="h-11 w-10 flex items-center justify-center bg-white/90 hover:bg-white transition border-l border-black/10">
+                <ChevronDown className="h-3.5 w-3.5 text-black" />
+              </button>
             </div>
           </div>
         </div>
 
+        {/* ── two-col layout ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-          {/* Left column */}
-          <div className="lg:col-span-3 space-y-6 lg:space-y-10">
 
-            {/* User Level Circle */}
+          {/* ── sidebar ──────────────────────────────────────────────────── */}
+          <div className="lg:col-span-4 space-y-6">
+
+            {/* Level / Usage */}
             <div>
-              <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                Your Level
-              </h3>
-
-              <div className="border border-white/10 rounded-lg bg-black p-6">
-                <div className="flex flex-col items-center">
-                  {/* Level Circle */}
-                  <div className="relative w-32 h-32 mb-4">
-                    <svg className="w-full h-full transform -rotate-90">
-                      {/* Background circle */}
-                      <circle
-                        cx="64"
-                        cy="64"
-                        r="56"
-                        stroke="rgba(255, 255, 255, 0.1)"
-                        strokeWidth="8"
-                        fill="none"
-                      />
-                      {/* Progress circle */}
-                      <circle
-                        cx="64"
-                        cy="64"
-                        r="56"
-                        stroke="white"
-                        strokeWidth="8"
-                        fill="none"
-                        strokeDasharray={`${2 * Math.PI * 56}`}
-                        strokeDashoffset={`${2 * Math.PI * 56 * (1 - (userStats?.current_level || 1) / (userStats?.max_level || 5))}`}
-                        strokeLinecap="round"
-                        className="transition-all duration-500"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold">
-                          {userStats?.current_level || 1}
-                        </div>
-                        <div className="text-xs text-white/50">
-                          / {userStats?.max_level || 5}
-                        </div>
-                      </div>
-                    </div>
+              <p className="text-base font-medium text-white mb-3">Level</p>
+              <div className="rounded-xl overflow-hidden" style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}>
+                {/* header */}
+                <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: `1px solid ${BORDER}` }}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-white/50">Last 30 days</span>
+                    <MiniRing percent={((userStats?.current_level||1)/(userStats?.max_level||5))*100} size={24} stroke={2.5}>
+                      <span className="text-[9px] font-bold text-white">{userStats?.current_level||1}</span>
+                    </MiniRing>
                   </div>
-
-                  <p className="text-sm text-white/70 text-center mb-2">
-                    Level {userStats?.current_level || 1} Editor
-                  </p>
-                  <p className="text-xs text-white/50 text-center">
-                    Complete more courses to level up
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Progress */}
-            <div>
-              <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                Progress
-              </h3>
-
-              <div className="border border-white/10 rounded-lg bg-black">
-                <div className="p-4 lg:p-5 border-b border-white/10 flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-start justify-between gap-3">
-                  <span className="text-xs text-white/50">Overall progress to obtain a higher skill level</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="h-7 px-3 text-xs border border-white/10 hover:bg-white/5 rounded-md w-full sm:w-auto"
-                  >
+                  <button className="text-xs text-white/55 px-3 py-1 rounded-md transition"
+                    style={{ border: `1px solid ${BORDER}` }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
                     Upgrade
-                  </Button>
+                  </button>
                 </div>
-                
-                <div className="p-4 lg:p-5 space-y-5">
-                  <UsageItem
-                    label="Course points"
-                    current={userStats?.total_points.toString() || "0"}
-                    total="10"
-                    percent={userStats ? Math.min((userStats.total_points / 10) * 100, 100) : 0}
-                  />
-                  <UsageItem
-                    label="Courses completed"
-                    current={completedCourses.length.toString()}
-                    total="50"
-                    percent={Math.min((completedCourses.length / 50) * 100, 100)}
-                  />
-                  <UsageItem
-                    label="Courses in progress"
-                    current={inProgressCourses.length.toString()}
-                    total="100"
-                    percent={Math.min((inProgressCourses.length / 100) * 100, 100)}
-                  />
-                  <UsageItem
-                    label="Learning streak"
-                    current="3"
-                    total="25"
-                    percent={12}
-                    expandable
-                  />
-                </div>
+
+                {/* rows */}
+                {visibleStats.map((row, i) => (
+                  <div key={row.label} className="flex items-center justify-between px-5 py-3"
+                    style={i < visibleStats.length - 1 ? { borderBottom: `1px solid ${BORDER}` } : {}}>
+                    <div className="flex items-center gap-3">
+                      <MiniRing percent={(row.current/row.total)*100} size={22} stroke={2.2} />
+                      <span className="text-sm text-white/60">{row.label}</span>
+                    </div>
+                    <span className="text-sm">
+                      <span className="text-white font-medium">{row.current}</span>
+                      {row.unit && <span className="text-white/25 text-xs ml-0.5">{row.unit}</span>}
+                      <span className="text-white/20 mx-1.5">/</span>
+                      <span className="text-white/35">{row.total}</span>
+                      {row.unit && <span className="text-white/20 text-xs ml-0.5">{row.unit}</span>}
+                    </span>
+                  </div>
+                ))}
+
+                {/* chevron */}
+                <button onClick={() => setExpandStats(!expandStats)}
+                  className="w-full flex items-center justify-center py-2.5"
+                  style={{ borderTop: `1px solid ${BORDER}` }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.03)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
+                  <ChevronDown className="h-4 w-4 text-white/25 transition-transform duration-300"
+                    style={{ transform: expandStats ? "rotate(180deg)" : "rotate(0deg)" }} />
+                </button>
               </div>
             </div>
 
-            {/* Assets */}
+            {/* Assetverse */}
             <div>
-              <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                Assets
-              </h3>
-
-              <div className="border border-white/10 rounded-lg bg-black p-5 lg:p-6">
-                <h3 className="mb-3 text-sm font-semibold tracking-tight">
-                  Get premium assets, all for free
-                </h3>
-                <p className="text-sm text-white/70 leading-relaxed mb-4">
-                  Access your shared editing assets, templates, presets and media packs inside Assetverse.
+              <p className="text-base font-medium text-white mb-3">Assetverse</p>
+              <div className="rounded-xl p-6 flex flex-col items-center text-center" style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}>
+                <p className="text-sm font-medium text-white mb-2">Get premium assets</p>
+                <p className="text-xs text-white/40 leading-relaxed mb-5 max-w-[240px]">
+                  Automatically access templates, presets and media packs — all for free inside Assetverse.
                 </p>
-
-                <Button
-                  asChild
-                  className="bg-white text-black hover:bg-white/90 h-10 text-sm rounded-md px-5 w-full"
-                >
-                  <a href="/assetverse">
-                    Open Assetverse
-                  </a>
-                </Button>
+                <button
+                  className="text-xs text-white/70 hover:text-white transition px-4 py-1.5 rounded-md"
+                  style={{ border: `1px solid ${BORDER}` }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)")}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+                  onClick={() => { window.location.href = "/assetverse" }}>
+                  Open Assetverse
+                </button>
               </div>
             </div>
 
-          </div>
-
-          {/* Main column */}
-          <div className="lg:col-span-9">
-            <div className="mb-4 lg:mb-6 flex items-center justify-between">
-              <h3 className="text-sm font-semibold tracking-tight">
-                {inProgressCourses.length > 0 ? 'Continue Learning' : 'Featured Courses'}
-              </h3>
-              {inProgressCourses.length > 0 && (
-                <Link 
-                  href="/dashboard/courses"
-                  className="text-xs text-white/60 hover:text-white transition"
-                >
-                  View all
-                </Link>
-              )}
-            </div>
-
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white"></div>
-              </div>
-            ) : (
-              <>
-                {/* Continue Learning Section */}
-                {inProgressCourses.length > 0 && (
-                  <div className="mb-10">
-                    <div
-                      className={
-                        viewMode === "grid"
-                          ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6"
-                          : "grid grid-cols-1 gap-4 lg:gap-5"
-                      }
-                    >
-                      {inProgressCourses.slice(0, 3).map((progress) => (
-                        <CourseCard
-                          key={progress.course_id}
-                          course={progress.courses}
-                          progress={progress.progress_percentage}
-                          viewMode={viewMode}
-                        />
-                      ))}
+            {/* Courses preview */}
+            <div>
+              <p className="text-base font-medium text-white mb-3">Courses</p>
+              <div className="rounded-xl overflow-hidden" style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}>
+                {recentCourse ? (
+                  <Link href={`/dashboard/courses/${recentCourse.id}`} className="block">
+                    <div className="aspect-[16/7] w-full relative" style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+                      <img src={recentCourse.image_url} alt={recentCourse.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     </div>
-
-                    <div className="mt-8 mb-6">
-                      <h3 className="text-sm font-semibold tracking-tight">
-                        Explore More Courses
-                      </h3>
+                    <div className="px-5 py-4">
+                      <p className="text-xs text-white/40">Continue learning</p>
+                      <p className="text-sm font-medium text-white mt-0.5">{recentCourse.title}</p>
                     </div>
+                  </Link>
+                ) : (
+                  <div className="px-5 py-10 flex flex-col items-center text-center">
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "rgba(255,255,255,0.06)" }}>
+                      <BookOpen className="h-6 w-6 text-white/40" />
+                    </div>
+                    <p className="text-xs text-white/40 leading-relaxed">
+                      Courses you have recently visited will appear here.
+                    </p>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
 
-                {/* All Courses */}
-                <div
-                  className={
-                    viewMode === "grid"
-                      ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6"
-                      : "grid grid-cols-1 gap-4 lg:gap-5"
-                  }
-                >
-                  {courses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      viewMode={viewMode}
-                    />
-                  ))}
-                </div>
+          {/* ── main: course cards ───────────────────────────────────────── */}
+          <div className="lg:col-span-8">
+            <p className="text-base font-medium text-white mb-3">Courses</p>
 
-                <div className="mt-8 lg:mt-10 flex justify-center">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="border border-white/10 hover:bg-white/5 text-white/70 text-sm h-11 rounded-md px-6"
-                  >
-                    <Link href="/dashboard/courses">
-                      Browse all courses
-                    </Link>
-                  </Button>
-                </div>
-              </>
+            {loading ? (
+              <div className="flex items-center justify-center py-32">
+                <div className="h-7 w-7 animate-spin rounded-full border-4 border-solid border-white/15 border-r-white" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {courses.map(course => (
+                  <CourseProjectCard key={course.id} course={course} progress={getProgress(course.id)} />
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -345,119 +257,121 @@ export default function OverviewContent({ userId }: { userId: string }) {
   )
 }
 
-function UsageItem({ 
-  label, 
-  current, 
-  total, 
-  percent,
-  expandable 
-}: { 
-  label: string
-  current: string
-  total: string
-  percent: number
-  expandable?: boolean
+// ─── MiniRing ─────────────────────────────────────────────────────────────────
+function MiniRing({ percent, size = 22, stroke = 2.2, children }: {
+  percent: number; size?: number; stroke?: number; children?: React.ReactNode
 }) {
+  const r      = (size - stroke * 2) / 2
+  const circ   = 2 * Math.PI * r
+  const offset = circ * (1 - Math.min(percent, 100) / 100)
+  const c      = size / 2
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-white/70">
-          {label}
-        </span>
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle cx={c} cy={c} r={r} stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} fill="none" />
+        <circle cx={c} cy={c} r={r} stroke="white" strokeWidth={stroke} fill="none"
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+          className="transition-all duration-500" />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">{children}</div>
+    </div>
+  )
+}
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-white/90">{current}</span>
-          <span className="text-white/30">/</span>
-          <span className="text-white/40">{total}</span>
-          {expandable && (
-            <ChevronDown className="h-3.5 w-3.5 text-white/40 ml-1" />
-          )}
+// ─── CourseProjectCard ───────────────────────────────────────────────────────
+function CourseProjectCard({ course, progress }: { course: Course; progress: number }) {
+  const [hovered, setHovered] = useState(false)
+
+  const dates   = ["Jan 26","Jan 28","Jan 24","Jan 30","Jan 22","Jan 27"]
+  const lastOpened = dates[course.id.charCodeAt(course.id.length - 1) % dates.length]
+
+  return (
+    <Link
+      href={`/dashboard/courses/${course.id}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="relative flex flex-col rounded-xl overflow-hidden transition-all duration-200"
+      style={{ backgroundColor: BG, border: `1px solid ${hovered ? BORDER_H : BORDER}`, minHeight: 180 }}
+    >
+      <div className="flex-1 p-5 flex flex-col">
+
+        {/* top row: progress ring (checkmark) left ↔ ••• right */}
+        <div className="flex items-start justify-between">
+          <ProgressCheckRing percent={progress} size={34} stroke={3.5} />
+
+          <button className="h-7 w-7 rounded-full flex items-center justify-center"
+            style={{ border: `1px solid ${BORDER}`, backgroundColor: "transparent" }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)")}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
+            onClick={e => e.preventDefault()}>
+            <MoreHorizontal className="h-3.5 w-3.5 text-white/40" />
+          </button>
+        </div>
+
+        {/* name + category */}
+        <div className="mt-3 flex-1">
+          <p className="text-base font-semibold text-white leading-snug">{course.title}</p>
+          <p className="text-xs text-white/40 mt-0.5">{course.category}</p>
+        </div>
+
+        {/* pills row */}
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <Pill>{course.difficulty}</Pill>
+          <Pill>{course.duration_minutes}m</Pill>
+          <Pill>{course.lessons_count} lessons</Pill>
         </div>
       </div>
 
-      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-        <div
-          className="h-full bg-white/70 rounded-full transition-all duration-500"
-          style={{ width: `${Math.min(percent, 100)}%` }}
-        />
+      {/* footer: date */}
+      <div className="px-5 pb-4">
+        <p className="text-xs text-white/28">{lastOpened}</p>
       </div>
+    </Link>
+  )
+}
 
-      {/* Percentage display */}
-      <div className="text-right">
-        <span className="text-xs text-white/50">{Math.round(percent)}%</span>
+// ─── ProgressCheckRing ───────────────────────────────────────────────────────
+// Ring that fills with progress. Shows a checkmark inside when > 0, filled
+// check when 100%.
+function ProgressCheckRing({ percent, size = 34, stroke = 3.5 }: { percent: number; size?: number; stroke?: number }) {
+  const r      = (size - stroke * 2) / 2
+  const circ   = 2 * Math.PI * r
+  const offset = circ * (1 - Math.min(percent, 100) / 100)
+  const c      = size / 2
+  const done   = percent >= 100
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle cx={c} cy={c} r={r} stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} fill="none" />
+        <circle cx={c} cy={c} r={r}
+          stroke={done ? "white" : "rgba(255,255,255,0.55)"}
+          strokeWidth={stroke} fill="none"
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+          className="transition-all duration-500" />
+      </svg>
+      {/* checkmark centre */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Check
+          className="transition-all duration-300"
+          style={{
+            width:  done ? size * 0.52 : size * 0.42,
+            height: done ? size * 0.52 : size * 0.42,
+            color:  done ? "white" : "rgba(255,255,255,0.35)",
+            strokeWidth: 2.8,
+          }}
+        />
       </div>
     </div>
   )
 }
 
-function CourseCard({
-  course,
-  progress,
-  viewMode
-}: {
-  course: Course
-  progress?: number
-  viewMode?: "grid" | "list"
-}) {
-  const isListView = viewMode === "list"
-
+// ─── Pill ─────────────────────────────────────────────────────────────────────
+function Pill({ children }: { children: React.ReactNode }) {
   return (
-    <Link
-      href={`/dashboard/courses/${course.id}`}
-      className={`group border border-white/10 rounded-xl bg-black hover:border-white/20 transition-colors overflow-hidden ${
-        isListView ? 'flex flex-col sm:flex-row' : ''
-      }`}
-    >
-      <div className={`${isListView ? 'sm:w-64' : ''} aspect-[16/9] w-full bg-white/5 relative ${isListView ? 'sm:aspect-auto flex-shrink-0' : ''}`}>
-        <img
-          src={course.image_url}
-          alt={course.title}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full bg-white/90 flex items-center justify-center">
-            <Play className="h-4 w-4 lg:h-5 lg:w-5 text-black ml-0.5" fill="black" />
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 lg:p-5 flex-1">
-        <p className="text-xs text-white/50 mb-1">
-          {course.category}
-        </p>
-
-        <h3 className="text-base font-medium mb-1">
-          {course.title}
-        </h3>
-
-        <p className="text-sm text-white/40 leading-relaxed mb-4 lg:mb-5 line-clamp-2">
-          {course.description}
-        </p>
-
-        {progress !== undefined ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-white/40">
-              <span>Progress</span>
-              <span>{progress}%</span>
-            </div>
-
-            <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-              <div
-                className="h-full bg-white/80 rounded-full transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-xs text-white/40">
-            <span className="px-2 py-0.5 rounded-full bg-white/5">
-              {course.difficulty}
-            </span>
-            <span>•</span>
-            <span>{course.lessons_count} lessons</span>
-          </div>
-        )}
-      </div>
-    </Link>
+    <span className="text-xs text-white/45 px-2.5 py-1 rounded-full"
+      style={{ backgroundColor: "rgba(255,255,255,0.06)" }}>
+      {children}
+    </span>
   )
 }

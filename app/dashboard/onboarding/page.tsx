@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowRight, Check } from "lucide-react"
+import { ArrowRight, Check, ArrowLeft, Sparkles } from "lucide-react"
 import { createApplication } from "@/lib/supabaseApi"
 import { LeLoLogo } from "@/components/lelo-logo"
 
@@ -17,7 +17,13 @@ type FormData = {
   portfolio_url: string
 }
 
-export default function OnboardingCard({ userId, onComplete }: { userId: string; onComplete: () => void }) {
+export default function OnboardingCard({ 
+  userId, 
+  onComplete 
+}: { 
+  userId: string | null | undefined
+  onComplete: () => void 
+}) {
   const [step, setStep] = useState<OnboardingStep>("name")
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
@@ -30,19 +36,62 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
 
   const steps: OnboardingStep[] = ["name", "why", "age", "experience", "portfolio", "review"]
 
+  // Load saved draft on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('editverse_onboarding_draft')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        setFormData(parsed)
+      } catch (e) {
+        console.error('Failed to load draft:', e)
+      }
+    }
+  }, [])
+
+  // Save draft whenever form data changes
+  useEffect(() => {
+    if (formData.full_name || formData.why_join) {
+      localStorage.setItem('editverse_onboarding_draft', JSON.stringify(formData))
+    }
+  }, [formData])
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && currentStepIndex > 0 && step !== 'review' && step !== 'submitting') {
+        handleBack()
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [step])
+
   const handleNext = () => {
     const idx = steps.indexOf(step)
     if (idx < steps.length - 1) setStep(steps[idx + 1])
   }
 
+  const handleBack = () => {
+    const idx = steps.indexOf(step)
+    if (idx > 0) setStep(steps[idx - 1])
+  }
+
+  const handleStepJump = (targetStep: OnboardingStep) => {
+    setStep(targetStep)
+  }
+
   const handleSubmit = async () => {
+    // Enhanced user validation
     if (!userId) {
-      setError("User session not found. Please refresh and try again.")
+      setError("Authentication required. Please sign in and try again.")
       return
     }
 
     setStep("submitting")
     setError("")
+    
     try {
       const { error: submitError } = await createApplication({
         user_id: userId,
@@ -59,6 +108,8 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
         return
       }
 
+      // Clear draft on success
+      localStorage.removeItem('editverse_onboarding_draft')
       setStep("success")
       setTimeout(() => onComplete(), 2000)
     } catch (err) {
@@ -70,11 +121,11 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
   const canContinue = () => {
     switch (step) {
       case "name":
-        return formData.full_name.trim().length > 0
+        return formData.full_name.trim().length >= 2
       case "why":
-        return formData.why_join.trim().length > 10
+        return formData.why_join.trim().length >= 10
       case "age":
-        return typeof formData.age === "number" && formData.age > 0
+        return typeof formData.age === "number" && formData.age >= 13 && formData.age <= 120
       default:
         return true
     }
@@ -82,128 +133,176 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
 
   const currentStepIndex = steps.indexOf(step)
   const totalSteps = steps.length
+  const progressPercentage = ((currentStepIndex + 1) / totalSteps) * 100
 
   return (
-    <div className="min-h-screen bg-black flex">
+    <div className="min-h-screen bg-white flex">
       
       {/* Left side - Form */}
-      <div className="w-full lg:w-[45%] flex flex-col">
+      <div className="w-full lg:w-1/2 flex flex-col relative">
+        
+        {/* Subtle gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-gray-50 pointer-events-none" />
         
         {/* Header */}
-        <div className="px-8 py-6 border-b border-white/10">
-          <div className="max-w-lg mx-auto">
-            <LeLoLogo size={32} />
+        <div className="relative px-6 sm:px-8 lg:px-12 py-6 border-b border-gray-200/80">
+          <div className="max-w-md mx-auto">
+            <LeLoLogo size={28} />
           </div>
         </div>
 
         {/* Form content */}
-        <div className="flex-1 px-8 py-16 overflow-y-auto">
-          <div className="max-w-lg mx-auto">
+        <div className="relative flex-1 px-6 sm:px-8 lg:px-12 py-12 overflow-y-auto">
+          <div className="max-w-md mx-auto">
             
-            {/* Progress bars - Frame style */}
+            {/* Progress indicator - Vercel style */}
             {step !== "submitting" && step !== "success" && (
-              <div className="flex gap-2 mb-12">
-                {steps.map((s, idx) => (
-                  <div
-                    key={s}
-                    className={`h-1 flex-1 rounded-full transition-all duration-500 ${
-                      idx <= currentStepIndex ? 'bg-white' : 'bg-white/10'
-                    }`}
+              <div className="mb-10">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium text-gray-500 tracking-wide">
+                    STEP {currentStepIndex + 1} OF {totalSteps}
+                  </p>
+                  <p className="text-xs font-medium text-gray-400">
+                    {Math.round(progressPercentage)}%
+                  </p>
+                </div>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-black transition-all duration-500 ease-out rounded-full"
+                    style={{ width: `${progressPercentage}%` }}
                   />
-                ))}
+                </div>
               </div>
             )}
 
             {/* Name step */}
             {step === "name" && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-semibold tracking-tight text-white">What's your name?</h1>
-                  <p className="text-base text-gray-400 leading-relaxed">This is how we'll address you in Editverse.</p>
-                </div>
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-300">Full name</label>
+                  <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+                    What's your name?
+                  </h1>
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    Help us personalize your experience in Editverse.
+                  </p>
+                </div>
+                <div className="space-y-2.5">
+                  <label htmlFor="name" className="text-sm font-medium text-gray-700">
+                    Full name
+                  </label>
                   <Input
-                    placeholder="Enter your name"
+                    id="name"
+                    placeholder="Alex Johnson"
                     value={formData.full_name}
                     onChange={e => setFormData({ ...formData, full_name: e.target.value })}
-                    className="h-14 text-base bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-white focus:ring-1 focus:ring-white rounded-lg"
+                    className="h-11 text-[15px] bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 
+                      focus:border-gray-900 focus:ring-4 focus:ring-gray-900/5 rounded-lg transition-all"
                     autoFocus
                     onKeyDown={e => e.key === "Enter" && canContinue() && handleNext()}
                   />
+                  {formData.full_name.length > 0 && formData.full_name.length < 2 && (
+                    <p className="text-xs text-amber-600">Name must be at least 2 characters</p>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Why step */}
             {step === "why" && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-semibold tracking-tight text-white">Why do you edit?</h1>
-                  <p className="text-base text-gray-400 leading-relaxed">Share your passion and motivation for video editing.</p>
-                </div>
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-300">Your motivation</label>
+                  <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+                    Why do you edit?
+                  </h1>
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    Share your passion and motivation for video editing.
+                  </p>
+                </div>
+                <div className="space-y-2.5">
+                  <label htmlFor="why" className="text-sm font-medium text-gray-700">
+                    Your motivation
+                  </label>
                   <textarea
-                    placeholder="I edit because..."
+                    id="why"
+                    placeholder="I edit because it allows me to tell stories and express creativity..."
                     value={formData.why_join}
                     onChange={e => setFormData({ ...formData, why_join: e.target.value })}
-                    rows={6}
-                    className="w-full px-4 py-3 text-base rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-gray-500 focus:border-white focus:ring-1 focus:ring-white resize-none"
+                    rows={5}
+                    className="w-full px-3.5 py-3 text-[15px] rounded-lg bg-white border border-gray-300 
+                      text-gray-900 placeholder:text-gray-400 
+                      focus:border-gray-900 focus:ring-4 focus:ring-gray-900/5 
+                      resize-none transition-all leading-relaxed"
                     autoFocus
                   />
-                  <p className="text-xs text-gray-500">Minimum 10 characters</p>
+                  <p className="text-xs text-gray-500">
+                    {formData.why_join.length}/500 • Minimum 10 characters
+                  </p>
                 </div>
               </div>
             )}
 
             {/* Age step */}
             {step === "age" && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-semibold tracking-tight text-white">How old are you?</h1>
-                  <p className="text-base text-gray-400 leading-relaxed">This helps us personalize your experience.</p>
-                </div>
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-300">Age</label>
+                  <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+                    How old are you?
+                  </h1>
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    This helps us tailor content and recommendations.
+                  </p>
+                </div>
+                <div className="space-y-2.5">
+                  <label htmlFor="age" className="text-sm font-medium text-gray-700">
+                    Age
+                  </label>
                   <Input
+                    id="age"
                     type="number"
-                    placeholder="Enter your age"
+                    placeholder="25"
                     value={formData.age || ""}
                     onChange={e => setFormData({ ...formData, age: Number(e.target.value) })}
-                    className="h-14 text-base bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-white focus:ring-1 focus:ring-white rounded-lg"
+                    className="h-11 text-[15px] bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 
+                      focus:border-gray-900 focus:ring-4 focus:ring-gray-900/5 rounded-lg transition-all"
                     autoFocus
                     onKeyDown={e => e.key === "Enter" && canContinue() && handleNext()}
                   />
+                  {formData.age !== "" && (formData.age < 13 || formData.age > 120) && (
+                    <p className="text-xs text-amber-600">Please enter a valid age (13-120)</p>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Experience step */}
             {step === "experience" && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-semibold tracking-tight text-white">What's your experience level?</h1>
-                  <p className="text-base text-gray-400 leading-relaxed">All skill levels are welcome in our community.</p>
-                </div>
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="space-y-3">
+                  <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+                    What's your experience level?
+                  </h1>
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    All skill levels are welcome in our community.
+                  </p>
+                </div>
+                <div className="space-y-2.5">
                   {(["Beginner", "Intermediate", "Advanced", "Professional"] as const).map(level => (
                     <button
                       key={level}
                       onClick={() => {
                         setFormData({ ...formData, experience_level: level })
-                        setTimeout(handleNext, 200)
+                        setTimeout(handleNext, 150)
                       }}
-                      className={`w-full p-5 rounded-xl border-2 text-left transition-all ${
+                      className={`w-full p-4 rounded-xl border text-left transition-all group ${
                         formData.experience_level === level 
-                          ? 'border-white bg-white/10' 
-                          : 'border-white/10 hover:border-white/30 hover:bg-white/5'
+                          ? 'border-gray-900 bg-gray-50 shadow-sm' 
+                          : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50/50'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-semibold text-white text-base">{level}</div>
-                          <div className="text-sm text-gray-400 mt-1">
+                          <div className="font-medium text-gray-900 text-[15px]">{level}</div>
+                          <div className="text-sm text-gray-600 mt-0.5">
                             {level === "Beginner" && "Just starting your editing journey"}
                             {level === "Intermediate" && "Comfortable with basic techniques"}
                             {level === "Advanced" && "Proficient with advanced workflows"}
@@ -211,7 +310,9 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
                           </div>
                         </div>
                         {formData.experience_level === level && (
-                          <Check className="w-5 h-5 text-white flex-shrink-0" />
+                          <div className="w-5 h-5 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+                            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                          </div>
                         )}
                       </div>
                     </button>
@@ -222,18 +323,31 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
 
             {/* Portfolio step */}
             {step === "portfolio" && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-semibold tracking-tight text-white">Share your work</h1>
-                  <p className="text-base text-gray-400 leading-relaxed">Add a link to your portfolio or previous projects. This is optional.</p>
-                </div>
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-300">Portfolio URL</label>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+                      Share your work
+                    </h1>
+                    <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-md">
+                      Optional
+                    </span>
+                  </div>
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    Add a link to your portfolio or previous projects.
+                  </p>
+                </div>
+                <div className="space-y-2.5">
+                  <label htmlFor="portfolio" className="text-sm font-medium text-gray-700">
+                    Portfolio URL
+                  </label>
                   <Input
+                    id="portfolio"
                     placeholder="https://yourportfolio.com"
                     value={formData.portfolio_url}
                     onChange={e => setFormData({ ...formData, portfolio_url: e.target.value })}
-                    className="h-14 text-base bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-white focus:ring-1 focus:ring-white rounded-lg"
+                    className="h-11 text-[15px] bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 
+                      focus:border-gray-900 focus:ring-4 focus:ring-gray-900/5 rounded-lg transition-all"
                     autoFocus
                     onKeyDown={e => e.key === "Enter" && handleNext()}
                   />
@@ -244,21 +358,27 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
 
             {/* Review step */}
             {step === "review" && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-semibold tracking-tight text-white">Review your application</h1>
-                  <p className="text-base text-gray-400 leading-relaxed">Make sure everything looks correct before submitting.</p>
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="space-y-3">
+                  <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+                    Review your application
+                  </h1>
+                  <p className="text-base text-gray-600 leading-relaxed">
+                    Make sure everything looks correct before submitting.
+                  </p>
                 </div>
-                <div className="space-y-4">
-                  <ReviewRow label="Name" value={formData.full_name} />
-                  <ReviewRow label="Motivation" value={formData.why_join} />
-                  <ReviewRow label="Age" value={String(formData.age)} />
-                  <ReviewRow label="Experience" value={formData.experience_level} />
-                  {formData.portfolio_url && <ReviewRow label="Portfolio" value={formData.portfolio_url} />}
+                <div className="border border-gray-200 rounded-xl divide-y divide-gray-200 overflow-hidden">
+                  <ReviewRow label="Name" value={formData.full_name} onEdit={() => handleStepJump("name")} />
+                  <ReviewRow label="Motivation" value={formData.why_join} onEdit={() => handleStepJump("why")} />
+                  <ReviewRow label="Age" value={String(formData.age)} onEdit={() => handleStepJump("age")} />
+                  <ReviewRow label="Experience" value={formData.experience_level} onEdit={() => handleStepJump("experience")} />
+                  {formData.portfolio_url && (
+                    <ReviewRow label="Portfolio" value={formData.portfolio_url} onEdit={() => handleStepJump("portfolio")} />
+                  )}
                 </div>
                 {error && (
-                  <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <p className="text-sm text-red-400">{error}</p>
+                  <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                    <p className="text-sm text-red-900 font-medium">{error}</p>
                   </div>
                 )}
               </div>
@@ -266,61 +386,105 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
 
             {/* Submitting state */}
             {step === "submitting" && (
-              <div className="text-center py-16 animate-in fade-in duration-500">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white mb-6" />
-                <p className="text-gray-400">Submitting your application...</p>
+              <div className="text-center py-20 animate-in fade-in duration-500">
+                <div className="inline-flex items-center justify-center mb-6">
+                  <div className="h-10 w-10 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+                </div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Submitting application</h2>
+                <p className="text-sm text-gray-600">This will only take a moment...</p>
               </div>
             )}
 
             {/* Success state */}
             {step === "success" && (
-              <div className="text-center py-16 animate-in fade-in zoom-in duration-500">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white mb-6">
-                  <Check className="h-6 w-6 text-black" />
+              <div className="text-center py-20 animate-in fade-in zoom-in-95 duration-500">
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-gray-900 mb-6 shadow-lg">
+                  <Check className="h-7 w-7 text-white" strokeWidth={2.5} />
                 </div>
-                <h2 className="text-2xl font-semibold text-white mb-2">Application submitted</h2>
-                <p className="text-gray-400">Welcome to Editverse!</p>
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">Application submitted</h2>
+                <p className="text-base text-gray-600">Welcome to Editverse!</p>
               </div>
             )}
 
           </div>
         </div>
 
-        {/* Footer with continue button */}
+        {/* Footer with navigation */}
         {step !== "submitting" && step !== "success" && (
-          <div className="px-8 py-8 border-t border-white/10">
-            <div className="max-w-lg mx-auto">
-              {step !== "review" ? (
+          <div className="relative px-6 sm:px-8 lg:px-12 py-5 border-t border-gray-200/80 bg-white/80 backdrop-blur-sm">
+            <div className="max-w-md mx-auto flex gap-3">
+              {currentStepIndex > 0 && step !== "review" && (
                 <Button
-                  onClick={handleNext}
-                  disabled={!canContinue()}
-                  className="w-full h-14 text-base bg-white text-black hover:bg-gray-200 disabled:bg-white/10 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors rounded-lg font-medium"
+                  onClick={handleBack}
+                  variant="outline"
+                  className="h-11 px-5 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 
+                    transition-all rounded-lg font-medium text-[15px]"
                 >
-                  Continue
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  className="w-full h-14 text-base bg-white text-black hover:bg-gray-200 transition-colors rounded-lg font-medium"
-                >
-                  Submit Application
-                  <Check className="ml-2 h-5 w-5" />
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
                 </Button>
               )}
+              <Button
+                onClick={step === "review" ? handleSubmit : handleNext}
+                disabled={!canContinue() && step !== "review" && step !== "portfolio"}
+                className="flex-1 h-11 text-[15px] bg-gray-900 text-white hover:bg-gray-800 
+                  disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed 
+                  transition-all rounded-lg font-medium shadow-sm hover:shadow"
+              >
+                {step === "review" ? "Submit Application" : "Continue"}
+                {step === "review" ? (
+                  <Check className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                )}
+              </Button>
             </div>
+            <p className="text-center mt-3 text-xs text-gray-500">
+              Press <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-gray-700 font-mono">ESC</kbd> to go back
+            </p>
           </div>
         )}
       </div>
 
       {/* Right side - Dashboard preview */}
-      <div className="hidden lg:flex lg:w-[55%] bg-zinc-950 relative overflow-hidden items-center justify-center p-16">
-        <div className="w-full h-full max-w-5xl max-h-[800px] rounded-xl border border-white/10 overflow-hidden shadow-2xl">
-          <img 
-            src="/images/dashboard-showcase.png" 
-            alt="Editverse Dashboard Preview"
-            className="w-full h-full object-cover"
-          />
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-gray-100 via-gray-50 to-white relative overflow-hidden items-center justify-center p-12">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(0,0,0,0.04)_0%,transparent_50%)]" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-gray-200/30 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-gray-200/30 to-transparent rounded-full blur-3xl" />
+        
+        <div className="relative w-full max-w-2xl">
+          <div className="relative rounded-2xl border border-gray-200/80 overflow-hidden shadow-2xl shadow-gray-900/10 bg-white">
+            {/* Browser chrome */}
+            <div className="bg-gray-50 border-b border-gray-200/80 px-4 py-3 flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-gray-300" />
+                <div className="w-3 h-3 rounded-full bg-gray-300" />
+                <div className="w-3 h-3 rounded-full bg-gray-300" />
+              </div>
+              <div className="flex-1 flex justify-center">
+                <div className="bg-white border border-gray-200 rounded-md px-3 py-1 text-xs text-gray-600 font-medium">
+                  editverse.app/dashboard
+                </div>
+              </div>
+            </div>
+            
+            {/* Preview image */}
+            <div className="aspect-[16/10] bg-gray-50">
+              <img 
+                src="/images/dashboard-showcase.png" 
+                alt="Editverse Dashboard Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+          
+          {/* Caption */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 font-medium">
+              Join thousands of creators in Editverse
+            </p>
+          </div>
         </div>
       </div>
 
@@ -328,11 +492,27 @@ export default function OnboardingCard({ userId, onComplete }: { userId: string;
   )
 }
 
-function ReviewRow({ label, value }: { label: string; value: string }) {
+function ReviewRow({ 
+  label, 
+  value, 
+  onEdit 
+}: { 
+  label: string
+  value: string
+  onEdit: () => void
+}) {
   return (
-    <div className="flex justify-between py-3 border-b border-white/10 last:border-0">
-      <span className="text-sm font-medium text-gray-400">{label}</span>
-      <span className="text-sm text-white text-right max-w-xs truncate">{value}</span>
-    </div>
+    <button
+      onClick={onEdit}
+      className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors group text-left"
+    >
+      <span className="text-sm font-medium text-gray-600">{label}</span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-900 max-w-xs truncate font-medium">{value}</span>
+        <span className="text-xs text-gray-400 group-hover:text-gray-600 transition-colors font-medium">
+          Edit
+        </span>
+      </div>
+    </button>
   )
 }
