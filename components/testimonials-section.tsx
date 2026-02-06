@@ -1,137 +1,70 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { Star, Quote } from "lucide-react"
+import React from "react"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Separator } from "@/components/ui/separator"
 
 const testimonials = [
   {
-    name: "Alex Chen",
-    role: "YouTube Editor",
-    avatar: "AC",
-    rating: 5,
-    text: "Editverse completely transformed my editing career. The courses are top-notch and the community support is incredible. I went from a beginner to working with 1M+ subscriber channels.",
-    platform: "YouTube"
+    quote: "Editverse helped us save 10+ hours per week by automating our repetitive tasks. We can't imagine going back!",
+    author: "Kurt Bates",
+    role: "Marketing Manager at BrightIdeas Inc.",
+    image: "https://github.com/shadcn.png",
   },
   {
-    name: "Sarah Mitchell",
-    role: "Content Creator",
-    avatar: "SM",
-    rating: 5,
-    text: "The resources and presets alone are worth it. But what really sets Editverse apart is their genuine care for editors. They truly work WITH you, not against you.",
-    platform: "TikTok"
-  },
-  {
-    name: "Marcus Johnson",
-    role: "Freelance Editor",
-    avatar: "MJ",
-    rating: 5,
-    text: "I was skeptical at first, but the portfolio system helped me land 3 major clients in my first month. The Discord community is always there to help and give feedback.",
-    platform: "Instagram"
-  },
-  {
-    name: "Emily Rodriguez",
-    role: "Gaming Editor",
-    avatar: "ER",
-    rating: 5,
-    text: "The Minecraft tools are a game-changer for gaming content. The team understands what editors actually need, not what they think we need.",
-    platform: "Twitch"
-  },
-  {
-    name: "David Kim",
-    role: "Motion Designer",
-    avatar: "DK",
-    rating: 5,
-    text: "From tutorials to real client work, EditCraft provided a clear path. The progress tracking keeps me motivated and the presets save hours of work.",
-    platform: "YouTube"
-  },
-  {
-    name: "Jessica Taylor",
-    role: "Social Media Editor",
-    avatar: "JT",
-    rating: 5,
-    text: "Best decision I made for my editing career. The team is responsive, the courses are well-structured, and the community feels like family.",
-    platform: "Instagram"
+    quote: "This tool is a game-changer for our remote team. The workflow automations are insanely good.",
+    author: "Alex Buckmaster",
+    role: "Founder of Editverse",
+    image: "https://github.com/shadcn.png",
   },
 ]
 
 export function TestimonialsSection() {
   return (
-    <section id="testimonials" className="py-20 px-4 bg-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black" />
+    <section className="py-16 md:py-24 bg-background" aria-labelledby="testimonial-title">
+      <div className="container mx-auto px-6">
+        <div className="flex flex-col gap-12">
+          <div className="flex flex-col gap-4 md:gap-5 max-w-xl text-center md:text-left">
+            <p className="text-sm md:text-base font-semibold text-muted-foreground leading-[20px] md:leading-6">
+              Testimonials
+            </p>
+            <h2 id="testimonial-title" className="text-3xl md:text-4xl font-bold">
+              Trusted by the best editors
+            </h2>
+          </div>
 
-      <div className="container mx-auto relative z-10">
-        <div className="text-center mb-16">
-          <motion.span
-            className="inline-block px-4 py-1.5 rounded-full border border-white/10 text-white/60 text-sm mb-4"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            Testimonials
-          </motion.span>
-          <motion.h2
-            className="text-4xl font-bold text-white mb-4"
-            style={{ fontFamily: "var(--font-playfair)" }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            viewport={{ once: true }}
-          >
-            What Our Editors Say
-          </motion.h2>
-          <motion.p
-            className="text-xl text-white/50 max-w-2xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            Real feedback from real editors who have grown with Editverse
-          </motion.p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={testimonial.name}
-              className="relative bg-[#0c0c0c] border border-white/5 rounded-lg p-6 hover:border-white/10 transition-all duration-300"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              viewport={{ once: true }}
-            >
-              <Quote className="absolute top-4 right-4 w-8 h-8 text-white/5" />
-
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/80 font-medium text-sm">
-                  {testimonial.avatar}
+          <div className="flex flex-col md:flex-row gap-8 md:gap-12">
+            {testimonials.map((testimonial, index) => (
+              <React.Fragment key={index}>
+                {index > 0 && (
+                  <>
+                    <div className="hidden md:block w-[1px] self-stretch bg-border" />
+                    <Separator className="md:hidden bg-border" orientation="horizontal" />
+                  </>
+                )}
+                <div className="flex flex-col gap-8">
+                  <p className="text-foreground text-lg font-medium leading-7 md:text-left text-center">
+                    {testimonial.quote}
+                  </p>
+                  <div className="flex md:flex-row flex-col items-center gap-5">
+                    <Avatar className="h-14 w-14">
+                      <AvatarImage src={testimonial.image || "/placeholder.svg"} alt={testimonial.author} />
+                      <AvatarFallback>
+                        {testimonial.author
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col gap-1 md:text-left text-center">
+                      <p className="text-foreground text-base font-semibold leading-6">{testimonial.author}</p>
+                      <p className="text-muted-foreground text-base leading-6">{testimonial.role}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-medium text-white">{testimonial.name}</h4>
-                  <p className="text-sm text-white/40">{testimonial.role}</p>
-                </div>
-              </div>
-
-              <div className="flex gap-1 mb-4">
-                {Array.from({ length: testimonial.rating }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className="w-3.5 h-3.5 text-white fill-white"
-                  />
-                ))}
-              </div>
-
-              <p className="text-white/60 mb-4 leading-relaxed text-sm">
-                {testimonial.text}
-              </p>
-
-              <div className="pt-4 border-t border-white/5">
-                <span className="text-xs text-white/30">
-                  Creating for {testimonial.platform}
-                </span>
-              </div>
-            </motion.div>
-          ))}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </div>
     </section>
