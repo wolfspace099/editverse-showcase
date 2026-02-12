@@ -7,7 +7,7 @@ import OverviewContent from "@/components/dashboard/overview-content"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getSupabaseClient } from "@/lib/supabaseClient"
 import type { User } from "@supabase/supabase-js"
-import { Check } from "lucide-react"
+import { Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 function DashboardContent() {
@@ -20,6 +20,9 @@ function DashboardContent() {
   const [hasApplication, setHasApplication] = useState<boolean | null>(null)
   const [applicationStatus, setApplicationStatus] = useState<"pending" | "approved" | "rejected" | null>(null)
   const [rejectionReason, setRejectionReason] = useState<string | null>(null)
+  const [dismissedAccessNotice, setDismissedAccessNotice] = useState(false)
+  const [dismissedPendingNotice, setDismissedPendingNotice] = useState(false)
+  const [dismissedRejectedNotice, setDismissedRejectedNotice] = useState(false)
 
   // Page state
   const [page, setPage] = useState<string>("overview")
@@ -107,16 +110,21 @@ function DashboardContent() {
         {page === "overview" && <OverviewContent userId={user.id} />}
 
         {/* Application modal */}
-        {hasApplication === false && (
+        {hasApplication === false && !dismissedAccessNotice && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-            <div className="bg-black border border-white/10 rounded-2xl w-full max-w-xs p-5 space-y-4 text-center relative">
+            <div
+              className="relative w-full max-w-xs p-5 space-y-4 text-center rounded-2xl"
+              style={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
 
               {/* Close button */}
               <button
-                onClick={() => setHasApplication(true)}
-                className="absolute top-3 right-3 text-white/60 hover:text-white transition-colors"
+                onClick={() => setDismissedAccessNotice(true)}
+                className="absolute top-3 right-3 h-7 w-7 rounded-full text-white/60 hover:text-white transition-colors flex items-center justify-center"
+                style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                aria-label="Dismiss notice"
               >
-                ✕
+                <X className="h-3.5 w-3.5" />
               </button>
 
               <h2 className="text-xl font-bold">Get access</h2>
@@ -148,10 +156,21 @@ function DashboardContent() {
           </div>
         )}
 
-        {applicationStatus === "rejected" && (
+        {applicationStatus === "rejected" && !dismissedRejectedNotice && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-            <div className="bg-black border border-red-400/40 rounded-2xl w-full max-w-md p-5 space-y-4 text-center">
-              <h2 className="text-xl font-bold text-red-300">Application Rejected</h2>
+            <div
+              className="relative w-full max-w-md p-5 space-y-4 text-center rounded-2xl"
+              style={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <button
+                onClick={() => setDismissedRejectedNotice(true)}
+                className="absolute top-3 right-3 h-7 w-7 rounded-full text-white/60 hover:text-white transition-colors flex items-center justify-center"
+                style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                aria-label="Dismiss notice"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <h2 className="text-xl font-bold text-white">Application Rejected</h2>
               <p className="text-white/80 text-sm">
                 Your application was reviewed and was not approved at this time.
               </p>
@@ -168,10 +187,21 @@ function DashboardContent() {
           </div>
         )}
 
-        {applicationStatus === "pending" && (
+        {applicationStatus === "pending" && !dismissedPendingNotice && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-            <div className="bg-black border border-yellow-400/40 rounded-2xl w-full max-w-md p-5 space-y-4 text-center">
-              <h2 className="text-xl font-bold text-yellow-300">Application In Review</h2>
+            <div
+              className="relative w-full max-w-md p-5 space-y-4 text-center rounded-2xl"
+              style={{ backgroundColor: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <button
+                onClick={() => setDismissedPendingNotice(true)}
+                className="absolute top-3 right-3 h-7 w-7 rounded-full text-white/60 hover:text-white transition-colors flex items-center justify-center"
+                style={{ backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                aria-label="Dismiss notice"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <h2 className="text-xl font-bold text-white">Application In Review</h2>
               <p className="text-white/80 text-sm">
                 Your application has been submitted and is waiting for admin approval.
               </p>
