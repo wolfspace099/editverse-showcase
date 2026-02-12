@@ -69,6 +69,17 @@ CREATE TABLE user_stats (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Admin emails (dynamic admin allowlist)
+CREATE TABLE IF NOT EXISTS admin_emails (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_by UUID
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS admin_emails_email_lower_key
+  ON admin_emails (lower(email));
+
 -- Indexes
 CREATE INDEX idx_courses_category ON courses(category);
 CREATE INDEX idx_courses_published ON courses(is_published);
@@ -83,18 +94,59 @@ ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lesson_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_emails ENABLE ROW LEVEL SECURITY;
 
 -- Policies
 
+-- Admin helper based on email claim in JWT
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    lower(coalesce(auth.jwt() ->> 'email', '')) IN ('wolfspace099@gmail.com')
+    OR EXISTS (
+      SELECT 1
+      FROM admin_emails ae
+      WHERE lower(ae.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+    );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated, service_role;
+
+INSERT INTO admin_emails (email)
+VALUES ('wolfspace099@gmail.com')
+ON CONFLICT DO NOTHING;
+
+DROP POLICY IF EXISTS "Admins can view admin emails" ON admin_emails;
+CREATE POLICY "Admins can view admin emails" ON admin_emails
+  FOR SELECT USING (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can insert admin emails" ON admin_emails;
+CREATE POLICY "Admins can insert admin emails" ON admin_emails
+  FOR INSERT WITH CHECK (public.is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete admin emails" ON admin_emails;
+CREATE POLICY "Admins can delete admin emails" ON admin_emails
+  FOR DELETE USING (public.is_admin());
+
 -- Courses: everyone can read published courses
+DROP POLICY IF EXISTS "Anyone can view published courses" ON courses;
 CREATE POLICY "Anyone can view published courses" ON courses
   FOR SELECT USING (is_published = true);
 
--- Courses: admin access
+-- Courses: admin access (email-based)
+DROP POLICY IF EXISTS "Admins have full access to courses" ON courses;
 CREATE POLICY "Admins have full access to courses" ON courses
-  FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+  FOR ALL
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- Lessons: read lessons of published courses
+DROP POLICY IF EXISTS "Anyone can view lessons of published courses" ON lessons;
 CREATE POLICY "Anyone can view lessons of published courses" ON lessons
   FOR SELECT USING (
     EXISTS (
@@ -102,6 +154,13 @@ CREATE POLICY "Anyone can view lessons of published courses" ON lessons
       WHERE courses.id = lessons.course_id AND courses.is_published = true
     )
   );
+
+-- Lessons: admin access (for course management)
+DROP POLICY IF EXISTS "Admins have full access to lessons" ON lessons;
+CREATE POLICY "Admins have full access to lessons" ON lessons
+  FOR ALL
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- User progress: users can only read/write their own
 CREATE POLICY "Users can manage own progress" ON user_progress
@@ -146,6 +205,7 @@ CREATE INDEX IF NOT EXISTS idx_lessons_chapter_id ON lessons(chapter_id);
 ALTER TABLE course_chapters ENABLE ROW LEVEL SECURITY;
 
 -- Policies for course_chapters
+DROP POLICY IF EXISTS "Anyone can view chapters of published courses" ON course_chapters;
 CREATE POLICY "Anyone can view chapters of published courses" ON course_chapters
   FOR SELECT USING (
     EXISTS (
@@ -154,8 +214,11 @@ CREATE POLICY "Anyone can view chapters of published courses" ON course_chapters
     )
   );
 
+DROP POLICY IF EXISTS "Admins have full access to chapters" ON course_chapters;
 CREATE POLICY "Admins have full access to chapters" ON course_chapters
-  FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+  FOR ALL
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- Create applications table
 CREATE TABLE IF NOT EXISTS applications (
@@ -204,12 +267,14 @@ CREATE POLICY "Users can update own pending application" ON applications
   FOR UPDATE USING (auth.uid()::text = user_id::text AND status = 'pending');
 
 -- Admins can view all applications
+DROP POLICY IF EXISTS "Admins can view all applications" ON applications;
 CREATE POLICY "Admins can view all applications" ON applications
-  FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
+  FOR SELECT USING (public.is_admin());
 
 -- Admins can update all applications (for approval/rejection)
+DROP POLICY IF EXISTS "Admins can update all applications" ON applications;
 CREATE POLICY "Admins can update all applications" ON applications
-  FOR UPDATE USING (auth.jwt() ->> 'role' = 'admin');
+  FOR UPDATE USING (public.is_admin());
 
 -- Add function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_applications_updated_at()

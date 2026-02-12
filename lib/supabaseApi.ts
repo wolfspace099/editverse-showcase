@@ -60,6 +60,8 @@ export async function createCourse(course: {
   video_url?: string
   difficulty?: string
   duration_minutes?: number
+  order_index?: number
+  is_published?: boolean
 }) {
   const { data, error } = await supabase
     .from('courses')
@@ -76,16 +78,35 @@ export async function updateCourse(courseId: string, updates: any) {
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', courseId)
     .select()
-    .single()
+    .maybeSingle()
+
+  if (!error && !data) {
+    return {
+      data: null,
+      error: {
+        message: 'Course not found or you do not have permission to update it.'
+      }
+    }
+  }
 
   return { data, error }
 }
 
 export async function deleteCourse(courseId: string) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('courses')
     .delete()
     .eq('id', courseId)
+    .select('id')
+    .maybeSingle()
+
+  if (!error && !data) {
+    return {
+      error: {
+        message: 'Course not found or you do not have permission to delete it.'
+      }
+    }
+  }
 
   return { error }
 }
@@ -548,4 +569,47 @@ export async function getApplicationStats() {
     rejected: rejected || 0,
     total: (pending || 0) + (approved || 0) + (rejected || 0)
   }
+}
+
+// ============= ADMIN EMAILS =============
+
+export type AdminEmail = {
+  id: string
+  email: string
+  created_at: string
+  created_by: string | null
+}
+
+export async function getCurrentUserIsAdmin() {
+  const { data, error } = await supabase.rpc('is_admin')
+  return { data: Boolean(data), error }
+}
+
+export async function getAdminEmails() {
+  const { data, error } = await supabase
+    .from('admin_emails')
+    .select('*')
+    .order('email', { ascending: true })
+
+  return { data, error }
+}
+
+export async function addAdminEmail(email: string) {
+  const normalized = email.trim().toLowerCase()
+  const { data, error } = await supabase
+    .from('admin_emails')
+    .insert({ email: normalized })
+    .select()
+    .single()
+
+  return { data, error }
+}
+
+export async function removeAdminEmail(emailId: string) {
+  const { error } = await supabase
+    .from('admin_emails')
+    .delete()
+    .eq('id', emailId)
+
+  return { error }
 }

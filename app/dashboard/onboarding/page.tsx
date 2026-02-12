@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { createApplication } from "@/lib/supabaseApi"
 import { createBrowserClient } from "@supabase/ssr"
 import { useRouter } from "next/navigation"
+import { Header } from "@/components/header"
 
 type OnboardingStep = "name" | "why" | "age" | "experience" | "portfolio" | "submitting" | "success"
 
@@ -139,7 +140,7 @@ export default function OnboardingCard({
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        
+        <Header />
         {/* Name step */}
         {step === "name" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

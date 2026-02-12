@@ -11,7 +11,9 @@ import {
   Check,
   Star,
   BookOpen,
-  MoreHorizontal
+  MoreHorizontal,
+  Play,
+  Clock
 } from "lucide-react"
 import Link from "next/link"
 import { getAllCourses, getUserProgress, getUserStats } from "@/lib/supabaseApi"
@@ -86,48 +88,15 @@ export default function OverviewContent({ userId }: { userId: string }) {
   return (
     <div className="px-4 sm:px-6 lg:px-8 min-h-full">
       <div className="max-w-[1440px] mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 lg:mb-10">
-          <div className="relative w-full sm:flex-1 sm:max-w-2xl">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-            <Input
-              type="text"
-              placeholder="Search Projects…"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 h-11 text-sm text-white placeholder:text-white/30 focus:ring-0"
-              style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}
-              onFocus={e  => (e.target.style.borderColor = BORDER_H)}
-              onBlur={e   => (e.target.style.borderColor = BORDER)}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button className="h-11 w-11 rounded-md flex items-center justify-center"
-              style={{ border: `1px solid ${BORDER}`, backgroundColor: "transparent" }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
-              <Grid3x3 className="h-4 w-4 text-white/50" />
-            </button>
-            <button className="h-11 w-11 rounded-md flex items-center justify-center"
-              style={{ border: `1px solid ${BORDER}`, backgroundColor: "transparent" }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.04)")}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
-              <List className="h-4 w-4 text-white/50" />
-            </button>
-
-            <div className="flex items-center rounded-md overflow-hidden ml-1" style={{ border: `1px solid ${BORDER}` }}>
-              <Button size="sm" className="h-11 bg-white text-black hover:bg-white/90 text-sm font-medium rounded-none px-5">
-                Add New…
-              </Button>
-              <button className="h-11 w-10 flex items-center justify-center bg-white/90 hover:bg-white transition border-l border-black/10">
-                <ChevronDown className="h-3.5 w-3.5 text-black" />
-              </button>
-            </div>
-          </div>
-        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           <div className="lg:col-span-4 space-y-6">
             <div>
+              {/* Page Header */}
+              <div className="mb-8 lg:mb-10">
+                <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome back!</h1>
+                <p className="text-white/60 text-sm lg:text-base">Get back to editing with our comprehensive learning capabilities.</p>
+              </div>
               <p className="text-base font-medium text-white mb-3">Level</p>
               <div className="rounded-xl overflow-hidden" style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}>
                 {/* header */}
@@ -227,7 +196,7 @@ export default function OverviewContent({ userId }: { userId: string }) {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {courses.map(course => (
-                  <CourseProjectCard key={course.id} course={course} progress={getProgress(course.id)} />
+                  <CourseCard key={course.id} course={course} viewMode="grid" />
                 ))}
               </div>
             )}
@@ -258,52 +227,54 @@ function MiniRing({ percent, size = 22, stroke = 2.2, children }: {
   )
 }
 
-function CourseProjectCard({ course, progress }: { course: Course; progress: number }) {
-  const [hovered, setHovered] = useState(false)
+function CourseCard({ course, viewMode }: { course: Course; viewMode: "grid" | "list" }) {
+  const link = `/dashboard/courses/${course.id}`
 
-  const dates   = ["Jan 26","Jan 28","Jan 24","Jan 30","Jan 22","Jan 27"]
-  const lastOpened = dates[course.id.charCodeAt(course.id.length - 1) % dates.length]
+  if (viewMode === "list") {
+    return (
+      <Link href={link} className="group border border-white/10 rounded-xl bg-black hover:border-white/20 transition-colors overflow-hidden flex flex-col sm:flex-row">
+        <div className="sm:w-64 aspect-[16/9] sm:aspect-auto bg-white/5 relative flex-shrink-0">
+          <img src={course.image_url} alt={course.title} className="w-full h-full object-cover" />
+        </div>
+        <div className="p-4 lg:p-6 flex-1 flex flex-col justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-white/50">{course.category}</span>
+              <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-white/50">{course.difficulty}</span>
+            </div>
+            <h3 className="text-lg font-medium mb-2">{course.title}</h3>
+            <p className="text-sm text-white/60 leading-relaxed mb-4">{course.description}</p>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-white/40">
+            <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{course.duration_minutes} min</span>
+            <span className="flex items-center gap-1"><Play className="h-3.5 w-3.5" />{course.lessons_count} lessons</span>
+          </div>
+        </div>
+      </Link>
+    )
+  }
 
   return (
-    <Link
-      href={`/dashboard/courses/${course.id}`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="relative flex flex-col rounded-xl overflow-hidden transition-all duration-200"
-      style={{ backgroundColor: BG, border: `1px solid ${hovered ? BORDER_H : BORDER}`, minHeight: 180 }}
-    >
-      <div className="flex-1 p-5 flex flex-col">
-
-        {/* top row: progress ring (checkmark) left ↔ ••• right */}
-        <div className="flex items-start justify-between">
-          <ProgressCheckRing percent={progress} size={34} stroke={3.5} />
-
-          <button className="h-7 w-7 rounded-full flex items-center justify-center"
-            style={{ border: `1px solid ${BORDER}`, backgroundColor: "transparent" }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)")}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-            onClick={e => e.preventDefault()}>
-            <MoreHorizontal className="h-3.5 w-3.5 text-white/40" />
-          </button>
-        </div>
-
-        {/* name + category */}
-        <div className="mt-3 flex-1">
-          <p className="text-base font-semibold text-white leading-snug">{course.title}</p>
-          <p className="text-xs text-white/40 mt-0.5">{course.category}</p>
-        </div>
-
-        {/* pills row */}
-        <div className="flex flex-wrap items-center gap-2 mt-3">
-          <Pill>{course.difficulty}</Pill>
-          <Pill>{course.duration_minutes}m</Pill>
-          <Pill>{course.lessons_count} lessons</Pill>
+    <Link href={link} className="group border border-white/10 rounded-xl bg-black hover:border-white/20 transition-colors overflow-hidden">
+      <div className="aspect-[16/9] w-full bg-white/5 relative">
+        <img src={course.image_url} alt={course.title} className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
+            <Play className="h-5 w-5 text-black ml-0.5" fill="black" />
+          </div>
         </div>
       </div>
-
-      {/* footer: date */}
-      <div className="px-5 pb-4">
-        <p className="text-xs text-white/28">{lastOpened}</p>
+      <div className="p-4 lg:p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-white/50">{course.category}</span>
+        </div>
+        <h3 className="text-base font-medium mb-1">{course.title}</h3>
+        <p className="text-sm text-white/50 leading-relaxed mb-4 line-clamp-2">{course.description}</p>
+        <div className="flex items-center gap-3 text-xs text-white/40">
+          <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{course.duration_minutes} min</span>
+          <span className="flex items-center gap-1"><Play className="h-3.5 w-3.5" />{course.lessons_count} lessons</span>
+          <span className="px-2 py-0.5 rounded-full bg-white/5">{course.difficulty}</span>
+        </div>
       </div>
     </Link>
   )
