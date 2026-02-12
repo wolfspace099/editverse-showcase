@@ -13,18 +13,32 @@ type OnboardingStep = "name" | "why" | "age" | "experience" | "portfolio" | "sub
 type FormData = {
   full_name: string
   why_join: string
-  age: number | ""
+  birth_date: string
   experience_level: "Beginner" | "Intermediate" | "Advanced" | "Professional"
   portfolio_url: string
 }
 
-export default function OnboardingCard({ 
-  userId, 
-  onComplete 
-}: { 
-  userId: string | null | undefined
-  onComplete: () => void 
-}) {
+function calculateAge(birthDate: string) {
+  if (!birthDate) return null
+  const birthday = new Date(`${birthDate}T00:00:00`)
+  if (Number.isNaN(birthday.getTime())) return null
+  const today = new Date()
+  let age = today.getFullYear() - birthday.getFullYear()
+  const monthDiff = today.getMonth() - birthday.getMonth()
+  const dayDiff = today.getDate() - birthday.getDate()
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1
+  return age
+}
+
+export default function OnboardingCard(
+  {
+    userId,
+    onComplete,
+  }: {
+    userId?: string | null
+    onComplete?: () => void
+  } = {}
+) {
   const router = useRouter()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,10 +46,11 @@ export default function OnboardingCard({
   )
   const [step, setStep] = useState<OnboardingStep>("name")
   const [userEmail, setUserEmail] = useState<string>("")
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(userId ?? null)
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
     why_join: "",
-    age: "",
+    birth_date: "",
     experience_level: "Beginner",
     portfolio_url: ""
   })
@@ -50,17 +65,32 @@ export default function OnboardingCard({
       if (user?.email) {
         setUserEmail(user.email)
       }
+      if (user?.id) {
+        setResolvedUserId(user.id)
+      }
     }
     getUserEmail()
   }, [])
+
+  useEffect(() => {
+    if (userId) {
+      setResolvedUserId(userId)
+    }
+  }, [userId])
 
   // Load saved draft on mount
   useEffect(() => {
     const saved = localStorage.getItem('editverse_onboarding_draft')
     if (saved) {
       try {
-        const parsed = JSON.parse(saved)
-        setFormData(parsed)
+        const parsed = JSON.parse(saved) as Partial<FormData> & { age?: number | "" }
+        setFormData({
+          full_name: parsed.full_name ?? "",
+          why_join: parsed.why_join ?? "",
+          birth_date: parsed.birth_date ?? "",
+          experience_level: parsed.experience_level ?? "Beginner",
+          portfolio_url: parsed.portfolio_url ?? "",
+        })
       } catch (e) {
         console.error('Failed to load draft:', e)
       }
@@ -89,8 +119,14 @@ export default function OnboardingCard({
   }
 
   const handleSubmit = async () => {
-    // Enhanced user validation
-    if (!userId) {
+    let submitUserId = resolvedUserId
+    if (!submitUserId) {
+      const { data: { user } } = await supabase.auth.getUser()
+      submitUserId = user?.id ?? null
+      if (submitUserId) setResolvedUserId(submitUserId)
+    }
+
+    if (!submitUserId) {
       setError("Authentication required. Please sign in and try again.")
       return
     }
@@ -100,9 +136,9 @@ export default function OnboardingCard({
     
     try {
       const { error: submitError } = await createApplication({
-        user_id: userId,
+        user_id: submitUserId,
         full_name: formData.full_name,
-        age: typeof formData.age === "number" ? formData.age : undefined,
+        age: calculateAge(formData.birth_date) ?? undefined,
         experience_level: formData.experience_level,
         why_join: formData.why_join,
         portfolio_url: formData.portfolio_url || undefined
@@ -117,7 +153,10 @@ export default function OnboardingCard({
       // Clear draft on success
       localStorage.removeItem('editverse_onboarding_draft')
       setStep("success")
-      setTimeout(() => onComplete(), 2000)
+      setTimeout(() => {
+        if (onComplete) onComplete()
+        else router.push("/dashboard")
+      }, 2000)
     } catch (err) {
       setError("Failed to submit application. Please try again.")
       setStep("name")
@@ -131,7 +170,10 @@ export default function OnboardingCard({
       case "why":
         return formData.why_join.trim().length >= 10
       case "age":
-        return typeof formData.age === "number" && formData.age >= 13 && formData.age <= 120
+        {
+          const age = calculateAge(formData.birth_date)
+          return age !== null && age >= 13 && age <= 120
+        }
       default:
         return true
     }
@@ -174,10 +216,6 @@ export default function OnboardingCard({
                 Continue
               </Button>
             </div>
-
-            {error && (
-              <p className="text-sm text-center text-destructive">{error}</p>
-            )}
           </div>
         )}
 
@@ -233,10 +271,11 @@ export default function OnboardingCard({
             
             <div className="space-y-4">
               <Input
-                type="number"
-                placeholder="DD/MM/YYYY"
-                value={formData.age || ""}
-                onChange={e => setFormData({ ...formData, age: Number(e.target.value) })}
+                type="date"
+                value={formData.birth_date}
+                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                max={new Date().toISOString().split("T")[0]}
+                min={`${new Date().getFullYear() - 120}-01-01`}
                 className="h-12 text-center text-base bg-background border-border text-foreground 
                   placeholder:text-muted-foreground focus-visible:ring-ring rounded-lg"
                 autoFocus
@@ -357,6 +396,9 @@ export default function OnboardingCard({
         {/* Footer text - shown on all question steps */}
         {step !== "submitting" && step !== "success" && (
           <div className="mt-8 text-center space-y-2">
+            {error && (
+              <p className="text-sm text-center text-destructive">{error}</p>
+            )}
             <p className="text-sm text-muted-foreground">
               Email verified as {userEmail || "loading..."}
             </p>

@@ -532,7 +532,7 @@ export function Header({ currentView = "overview", onViewChange }: HeaderProps) 
             <ProfileItem label="Account settings" onClick={() => handleNavClick("settings")} />
             <ProfileItem
               label="Browse courses"
-              onClick={() => handleNavClick("courses")}
+              href="/dashboard/courses"
               rightIcon={Search}
             />
           </div>

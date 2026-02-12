@@ -45,6 +45,7 @@ export default function CoursesContent({ userId }: { userId: string }) {
   
   const [courses, setCourses] = useState<Course[]>([])
   const [continueLearning, setContinueLearning] = useState<UserProgress[]>([])
+  const [allProgress, setAllProgress] = useState<UserProgress[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function CoursesContent({ userId }: { userId: string }) {
     setCourses(coursesData || [])
 
     const { data: progressData } = await getUserProgress(userId)
+    setAllProgress(progressData || [])
     const inProgress = progressData?.filter(p => 
       p.progress_percentage > 0 && p.progress_percentage < 100
     ) || []
@@ -70,6 +72,12 @@ export default function CoursesContent({ userId }: { userId: string }) {
 
     setLoading(false)
   }
+
+  const getProgress = (courseId: string) =>
+    Math.max(
+      0,
+      Math.min(100, allProgress.find(p => p.course_id === courseId)?.progress_percentage ?? 0)
+    )
 
   return (
     <div className="px-4 sm:px-6 lg:px-8">
@@ -198,7 +206,12 @@ export default function CoursesContent({ userId }: { userId: string }) {
             }
           >
             {courses.map(course => (
-              <CourseCard key={course.id} course={course} viewMode={viewMode} />
+              <CourseCard
+                key={course.id}
+                course={course}
+                viewMode={viewMode}
+                progress={getProgress(course.id)}
+              />
             ))}
           </div>
         )}
@@ -312,7 +325,15 @@ function ContinueLearningCard({
   )
 }
 
-function CourseCard({ course, viewMode }: { course: Course; viewMode: "grid" | "list" }) {
+function CourseCard({
+  course,
+  viewMode,
+  progress
+}: {
+  course: Course
+  viewMode: "grid" | "list"
+  progress: number
+}) {
   const link = `/dashboard/courses/${course.id}`
 
   if (viewMode === "list") {
@@ -340,6 +361,17 @@ function CourseCard({ course, viewMode }: { course: Course; viewMode: "grid" | "
             <p className="text-sm text-white/60 leading-relaxed mb-4">
               {course.description}
             </p>
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center justify-between text-xs text-white/40">
+                <span>{progress}% complete</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full bg-white/80 rounded-full transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-4 text-xs text-white/40">
@@ -382,6 +414,17 @@ function CourseCard({ course, viewMode }: { course: Course; viewMode: "grid" | "
         <p className="text-sm text-white/50 leading-relaxed mb-4 line-clamp-2">
           {course.description}
         </p>
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center justify-between text-xs text-white/40">
+            <span>{progress}% complete</span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full bg-white/80 rounded-full transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
 
         <div className="flex items-center gap-3 text-xs text-white/40">
           <span className="flex items-center gap-1">

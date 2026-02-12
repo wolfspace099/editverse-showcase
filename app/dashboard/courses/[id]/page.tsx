@@ -75,6 +75,8 @@ function CoursePlayerContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
   const [isPlaying, setIsPlaying] = useState(false)
+  const [applicationStatus, setApplicationStatus] = useState<"approved" | "pending" | "rejected" | "none" | null>(null)
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -86,16 +88,35 @@ function CoursePlayerContent() {
         return
       }
       setUserId(user.id)
+
+      const { data: applicationData, error: applicationError } = await supabase
+        .from("applications")
+        .select("status, rejection_reason")
+        .eq("user_id", user.id)
+        .single()
+
+      if (applicationError && applicationError.code !== "PGRST116") {
+        console.error("Failed to fetch application status:", applicationError)
+      }
+
+      if (!applicationData) {
+        setApplicationStatus("none")
+      } else {
+        setApplicationStatus(applicationData.status as "approved" | "pending" | "rejected")
+        setRejectionReason(applicationData.rejection_reason ?? null)
+      }
+
+      setLoading(false)
     }
 
     getUser()
   }, [supabase, router])
 
   useEffect(() => {
-    if (userId && courseId) {
+    if (userId && courseId && applicationStatus === "approved") {
       loadCourseData()
     }
-  }, [userId, courseId])
+  }, [userId, courseId, applicationStatus])
 
   useEffect(() => {
     setIsPlaying(false)
@@ -257,10 +278,53 @@ function CoursePlayerContent() {
     })
   }
 
-  if (loading) {
+  if (loading || applicationStatus === null) {
     return (
       <div className={`${GeistSans.className} min-h-screen bg-black text-white flex items-center justify-center`}>
         <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-white/20 border-r-white" />
+      </div>
+    )
+  }
+
+  if (applicationStatus !== "approved") {
+    const title =
+      applicationStatus === "pending"
+        ? "Application Under Review"
+        : applicationStatus === "rejected"
+        ? "Application Rejected"
+        : "Application Required"
+    const description =
+      applicationStatus === "pending"
+        ? "Your application is still being reviewed. You can browse the dashboard while you wait."
+        : applicationStatus === "rejected"
+        ? "Your application was not approved. You currently cannot open course lessons."
+        : "You need to submit an application before you can open courses."
+
+    return (
+      <div className={`${GeistSans.className} min-h-screen bg-black text-white`}>
+        <Header currentView="courses" />
+        <div className="pt-40 px-4">
+          <div className="max-w-xl mx-auto border border-white/10 rounded-xl bg-white/5 p-6 text-center space-y-4">
+            <h1 className="text-2xl font-semibold">{title}</h1>
+            <p className="text-sm text-white/70">{description}</p>
+            {applicationStatus === "rejected" && rejectionReason && (
+              <div className="text-left border border-white/10 rounded-lg p-3 bg-black/40">
+                <p className="text-xs uppercase tracking-wide text-white/50 mb-1">Reason</p>
+                <p className="text-sm text-white/90">{rejectionReason}</p>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button asChild variant="outline">
+                <Link href="/dashboard?page=overview">Back to dashboard</Link>
+              </Button>
+              {applicationStatus === "none" && (
+                <Button asChild className="bg-white text-black hover:bg-white/90">
+                  <Link href="/dashboard/onboarding">Apply now</Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

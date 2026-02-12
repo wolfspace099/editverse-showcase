@@ -52,6 +52,7 @@ export default function OverviewContent({ userId }: { userId: string }) {
   const [userStats,    setUserStats]    = useState<UserStats | null>(null)
   const [loading,      setLoading]      = useState(true)
   const [expandStats,  setExpandStats]  = useState(false)
+  const [viewMode,     setViewMode]     = useState<"grid" | "list">("grid")
 
   useEffect(() => { loadData() }, [userId])
 
@@ -69,7 +70,10 @@ export default function OverviewContent({ userId }: { userId: string }) {
   }
 
   const getProgress = (courseId: string) =>
-    userProgress.find(p => p.course_id === courseId)?.progress_percentage ?? 0
+    Math.max(
+      0,
+      Math.min(100, userProgress.find(p => p.course_id === courseId)?.progress_percentage ?? 0)
+    )
 
   const completedCourses  = userProgress.filter(p => p.progress_percentage === 100)
   const inProgressCourses = userProgress.filter(p => p.progress_percentage > 0 && p.progress_percentage < 100)
@@ -187,16 +191,37 @@ export default function OverviewContent({ userId }: { userId: string }) {
             </div>
           </div>
           <div className="lg:col-span-8">
-            <p className="text-base font-medium text-white mb-3">Courses</p>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-base font-medium text-white">Courses</p>
+              <div className="flex items-center border border-white/10 rounded-md">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 ${viewMode === "grid" ? "bg-white/10" : "hover:bg-white/5"} transition-colors`}
+                >
+                  <Grid3x3 className="h-4 w-4 text-white/60" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 ${viewMode === "list" ? "bg-white/10" : "hover:bg-white/5"} transition-colors border-l border-white/10`}
+                >
+                  <List className="h-4 w-4 text-white/60" />
+                </button>
+              </div>
+            </div>
 
             {loading ? (
               <div className="flex items-center justify-center py-32">
                 <div className="h-7 w-7 animate-spin rounded-full border-4 border-solid border-white/15 border-r-white" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
                 {courses.map(course => (
-                  <CourseCard key={course.id} course={course} viewMode="grid" />
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    viewMode={viewMode}
+                    progress={getProgress(course.id)}
+                  />
                 ))}
               </div>
             )}
@@ -227,7 +252,15 @@ function MiniRing({ percent, size = 22, stroke = 2.2, children }: {
   )
 }
 
-function CourseCard({ course, viewMode }: { course: Course; viewMode: "grid" | "list" }) {
+function CourseCard({
+  course,
+  viewMode,
+  progress
+}: {
+  course: Course
+  viewMode: "grid" | "list"
+  progress: number
+}) {
   const link = `/dashboard/courses/${course.id}`
 
   if (viewMode === "list") {
@@ -241,9 +274,13 @@ function CourseCard({ course, viewMode }: { course: Course; viewMode: "grid" | "
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-white/50">{course.category}</span>
               <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-white/50">{course.difficulty}</span>
+              <Pill>{progress}% complete</Pill>
             </div>
             <h3 className="text-lg font-medium mb-2">{course.title}</h3>
             <p className="text-sm text-white/60 leading-relaxed mb-4">{course.description}</p>
+            <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden mb-4">
+              <div className="h-full bg-white/80 rounded-full transition-all" style={{ width: `${progress}%` }} />
+            </div>
           </div>
           <div className="flex items-center gap-4 text-xs text-white/40">
             <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{course.duration_minutes} min</span>
@@ -265,11 +302,15 @@ function CourseCard({ course, viewMode }: { course: Course; viewMode: "grid" | "
         </div>
       </div>
       <div className="p-4 lg:p-5">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-xs px-2 py-1 rounded-full bg-white/5 text-white/50">{course.category}</span>
+          <ProgressCheckRing percent={progress} />
         </div>
         <h3 className="text-base font-medium mb-1">{course.title}</h3>
         <p className="text-sm text-white/50 leading-relaxed mb-4 line-clamp-2">{course.description}</p>
+        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden mb-3">
+          <div className="h-full bg-white/80 rounded-full transition-all" style={{ width: `${progress}%` }} />
+        </div>
         <div className="flex items-center gap-3 text-xs text-white/40">
           <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{course.duration_minutes} min</span>
           <span className="flex items-center gap-1"><Play className="h-3.5 w-3.5" />{course.lessons_count} lessons</span>

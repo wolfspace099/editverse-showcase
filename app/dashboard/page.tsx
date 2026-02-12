@@ -18,6 +18,8 @@ function DashboardContent() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [hasApplication, setHasApplication] = useState<boolean | null>(null)
+  const [applicationStatus, setApplicationStatus] = useState<"pending" | "approved" | "rejected" | null>(null)
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null)
 
   // Page state
   const [page, setPage] = useState<string>("overview")
@@ -52,7 +54,7 @@ function DashboardContent() {
         // Check if application exists
         const { data: appData, error: appError } = await supabase
           .from("applications")
-          .select("id")
+          .select("id, status, rejection_reason")
           .eq("user_id", session.user.id)
           .single()
 
@@ -61,6 +63,8 @@ function DashboardContent() {
         }
 
         setHasApplication(!!appData)
+        setApplicationStatus((appData?.status as "pending" | "approved" | "rejected" | undefined) ?? null)
+        setRejectionReason(appData?.rejection_reason ?? null)
         setLoading(false)
       } catch (err) {
         console.error("Auth or application check error:", err)
@@ -140,6 +144,40 @@ function DashboardContent() {
               >
                 Apply Now
               </Button>
+            </div>
+          </div>
+        )}
+
+        {applicationStatus === "rejected" && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+            <div className="bg-black border border-red-400/40 rounded-2xl w-full max-w-md p-5 space-y-4 text-center">
+              <h2 className="text-xl font-bold text-red-300">Application Rejected</h2>
+              <p className="text-white/80 text-sm">
+                Your application was reviewed and was not approved at this time.
+              </p>
+              {rejectionReason && (
+                <div className="text-left border border-white/10 rounded-lg p-3 bg-white/5">
+                  <p className="text-xs uppercase tracking-wide text-white/50 mb-1">Reason</p>
+                  <p className="text-sm text-white/90">{rejectionReason}</p>
+                </div>
+              )}
+              <p className="text-xs text-white/50">
+                Contact an admin if you want to reapply.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {applicationStatus === "pending" && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+            <div className="bg-black border border-yellow-400/40 rounded-2xl w-full max-w-md p-5 space-y-4 text-center">
+              <h2 className="text-xl font-bold text-yellow-300">Application In Review</h2>
+              <p className="text-white/80 text-sm">
+                Your application has been submitted and is waiting for admin approval.
+              </p>
+              <p className="text-xs text-white/50">
+                You can explore the dashboard, but course lessons stay locked until approval.
+              </p>
             </div>
           </div>
         )}
