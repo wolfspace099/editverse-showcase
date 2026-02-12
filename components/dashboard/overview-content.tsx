@@ -16,7 +16,6 @@ import {
 import Link from "next/link"
 import { getAllCourses, getUserProgress, getUserStats } from "@/lib/supabaseApi"
 
-// ─── types ────────────────────────────────────────────────────────────────────
 type Course = {
   id: string
   title: string
@@ -40,12 +39,10 @@ type UserStats = {
   max_level: number
 }
 
-// ─── constants ────────────────────────────────────────────────────────────────
 const BG       = "#0a0a0a"
 const BORDER   = "rgba(255,255,255,0.06)"
 const BORDER_H = "rgba(255,255,255,0.13)"
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function OverviewContent({ userId }: { userId: string }) {
   const [searchQuery,  setSearchQuery]  = useState("")
   const [courses,      setCourses]      = useState<Course[]>([])
@@ -89,8 +86,6 @@ export default function OverviewContent({ userId }: { userId: string }) {
   return (
     <div className="px-4 sm:px-6 lg:px-8 min-h-full">
       <div className="max-w-[1440px] mx-auto">
-
-        {/* ── top bar ────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 lg:mb-10">
           <div className="relative w-full sm:flex-1 sm:max-w-2xl">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
@@ -130,14 +125,8 @@ export default function OverviewContent({ userId }: { userId: string }) {
             </div>
           </div>
         </div>
-
-        {/* ── two-col layout ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-
-          {/* ── sidebar ──────────────────────────────────────────────────── */}
           <div className="lg:col-span-4 space-y-6">
-
-            {/* Level / Usage */}
             <div>
               <p className="text-base font-medium text-white mb-3">Level</p>
               <div className="rounded-xl overflow-hidden" style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}>
@@ -157,7 +146,6 @@ export default function OverviewContent({ userId }: { userId: string }) {
                   </button>
                 </div>
 
-                {/* rows */}
                 {visibleStats.map((row, i) => (
                   <div key={row.label} className="flex items-center justify-between px-5 py-3"
                     style={i < visibleStats.length - 1 ? { borderBottom: `1px solid ${BORDER}` } : {}}>
@@ -175,7 +163,6 @@ export default function OverviewContent({ userId }: { userId: string }) {
                   </div>
                 ))}
 
-                {/* chevron */}
                 <button onClick={() => setExpandStats(!expandStats)}
                   className="w-full flex items-center justify-center py-2.5"
                   style={{ borderTop: `1px solid ${BORDER}` }}
@@ -186,8 +173,6 @@ export default function OverviewContent({ userId }: { userId: string }) {
                 </button>
               </div>
             </div>
-
-            {/* Assetverse */}
             <div>
               <p className="text-base font-medium text-white mb-3">Assetverse</p>
               <div className="rounded-xl p-6 flex flex-col items-center text-center" style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}>
@@ -205,8 +190,6 @@ export default function OverviewContent({ userId }: { userId: string }) {
                 </button>
               </div>
             </div>
-
-            {/* Courses preview */}
             <div>
               <p className="text-base font-medium text-white mb-3">Courses</p>
               <div className="rounded-xl overflow-hidden" style={{ backgroundColor: BG, border: `1px solid ${BORDER}` }}>
@@ -234,8 +217,6 @@ export default function OverviewContent({ userId }: { userId: string }) {
               </div>
             </div>
           </div>
-
-          {/* ── main: course cards ───────────────────────────────────────── */}
           <div className="lg:col-span-8">
             <p className="text-base font-medium text-white mb-3">Courses</p>
 
@@ -257,7 +238,6 @@ export default function OverviewContent({ userId }: { userId: string }) {
   )
 }
 
-// ─── MiniRing ─────────────────────────────────────────────────────────────────
 function MiniRing({ percent, size = 22, stroke = 2.2, children }: {
   percent: number; size?: number; stroke?: number; children?: React.ReactNode
 }) {
@@ -278,7 +258,6 @@ function MiniRing({ percent, size = 22, stroke = 2.2, children }: {
   )
 }
 
-// ─── CourseProjectCard ───────────────────────────────────────────────────────
 function CourseProjectCard({ course, progress }: { course: Course; progress: number }) {
   const [hovered, setHovered] = useState(false)
 
@@ -330,9 +309,6 @@ function CourseProjectCard({ course, progress }: { course: Course; progress: num
   )
 }
 
-// ─── ProgressCheckRing ───────────────────────────────────────────────────────
-// Ring that fills with progress. Shows a checkmark inside when > 0, filled
-// check when 100%.
 function ProgressCheckRing({ percent, size = 34, stroke = 3.5 }: { percent: number; size?: number; stroke?: number }) {
   const r      = (size - stroke * 2) / 2
   const circ   = 2 * Math.PI * r
@@ -366,7 +342,6 @@ function ProgressCheckRing({ percent, size = 34, stroke = 3.5 }: { percent: numb
   )
 }
 
-// ─── Pill ─────────────────────────────────────────────────────────────────────
 function Pill({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-xs text-white/45 px-2.5 py-1 rounded-full"

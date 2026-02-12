@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { LeLoLogo } from "./lelo-logo"
 import { Button } from "@/components/ui/button"
 import { getSupabaseClient } from "@/lib/supabaseClient"
-import { UserCheck, LogOut, Settings, Home, ChevronDown } from "lucide-react"
+import { UserCheck, LogOut, Settings, Home, ChevronDown, Users } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +63,147 @@ export function Header({ children }: { children?: React.ReactNode }) {
 
   return (
     <>
+      <style jsx global>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes shimmer {
+          0% {
+            background-position: -200% center;
+          }
+          100% {
+            background-position: 200% center;
+          }
+        }
+
+        .fancy-dropdown {
+          background: linear-gradient(
+            135deg,
+            rgba(0, 0, 0, 0.98) 0%,
+            rgba(20, 20, 30, 0.98) 100%
+          );
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 
+            0 10px 40px rgba(0, 0, 0, 0.4),
+            0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+            0 20px 60px rgba(0, 0, 0, 0.3);
+          animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .fancy-menu-item {
+          position: relative;
+          padding: 14px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
+        }
+
+        .fancy-menu-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.05);
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+
+        .fancy-menu-item:hover::before {
+          opacity: 1;
+        }
+
+        .fancy-menu-item:hover {
+          background: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-button {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .nav-button::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          width: 0;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, white, transparent);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transform: translateX(-50%);
+        }
+
+        .nav-button:hover::after {
+          width: 100%;
+        }
+
+        .team-button {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .team-button:hover {
+          box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+          transform: translateY(-2px);
+        }
+
+        .menu-label {
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+          color: rgba(255, 255, 255, 0.4);
+          padding: 12px 16px 8px 16px;
+          margin-top: 8px;
+        }
+
+        .menu-separator {
+          height: 1px;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.1),
+            transparent
+          );
+          margin: 8px 0;
+        }
+
+        .avatar-ring {
+          position: relative;
+        }
+
+        .avatar-ring::before {
+          content: '';
+          position: absolute;
+          inset: -3px;
+          border-radius: 50%;
+          padding: 2px;
+          background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+
+        .avatar-ring:hover::before {
+          opacity: 1;
+        }
+      `}</style>
+
       <header
         className={`
           fixed top-0 left-0 w-full z-50 transition-all duration-300 ease-in-out
@@ -86,44 +227,41 @@ export function Header({ children }: { children?: React.ReactNode }) {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center gap-1 text-white/60 hover:text-white px-3 py-2 text-sm rounded-full hover:bg-white/10 transition-all"
-                >
-                  Courses <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48 bg-black/95 border border-white/20 rounded-xl shadow-lg py-1">
-                <DropdownMenuItem className="rounded-full hover:bg-white/10" onClick={() => window.location.href = "/courses/javascript"}>JavaScript</DropdownMenuItem>
-                <DropdownMenuItem className="rounded-full hover:bg-white/10" onClick={() => window.location.href = "/courses/react"}>React</DropdownMenuItem>
-                <DropdownMenuItem className="rounded-full hover:bg-white/10" onClick={() => window.location.href = "/courses/css"}>CSS</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center gap-1 text-white/60 hover:text-white px-3 py-2 text-sm rounded-full hover:bg-white/10 transition-all"
-                >
-                  Resources <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48 bg-black/95 border border-white/20 rounded-xl shadow-lg py-1">
-                <DropdownMenuItem className="rounded-full hover:bg-white/10" onClick={() => window.location.href = "/resources/blog"}>Blog</DropdownMenuItem>
-                <DropdownMenuItem className="rounded-full hover:bg-white/10" onClick={() => window.location.href = "/resources/docs"}>Docs</DropdownMenuItem>
-                <DropdownMenuItem className="rounded-full hover:bg-white/10" onClick={() => window.location.href = "/resources/tutorials"}>Tutorials</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
+            {/* Courses Button */}
             <Button
               variant="ghost"
               size="sm"
-              className="text-white/60 hover:text-white px-3 py-2 text-sm rounded-full hover:bg-white/10 transition-all"
+              className="nav-button text-white/60 hover:text-white px-3 py-2 text-sm rounded-full hover:bg-white/10 transition-all"
+              onClick={() => window.location.href = "/dashboard/courses"}
+            >
+              Courses
+            </Button>
+
+            {/* Our team Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="nav-button text-white/60 hover:text-white px-3 py-2 text-sm rounded-full hover:bg-white/10 transition-all"
+              onClick={() => window.location.href = "/assetverse"}
+            >
+              Assets
+            </Button>
+
+            {/* Our team Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="nav-button text-white/60 hover:text-white px-3 py-2 text-sm rounded-full hover:bg-white/10 transition-all"
+              onClick={() => window.location.href = "/team"}
+            >
+              Our team
+            </Button>
+
+            {/* Pricing Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="nav-button text-white/60 hover:text-white px-3 py-2 text-sm rounded-full hover:bg-white/10 transition-all"
               onClick={() => window.location.href = "/pricing"}
             >
               Pricing
@@ -144,32 +282,46 @@ export function Header({ children }: { children?: React.ReactNode }) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <img
-                      src={user.user_metadata?.avatar_url || ""}
-                      alt={user.user_metadata?.full_name || "Discord User"}
-                      className="w-10 h-10 rounded-full border border-white/40 cursor-pointer transition-transform hover:scale-105"
-                    />
+                    <div className="avatar-ring">
+                      <img
+                        src={user.user_metadata?.avatar_url || ""}
+                        alt={user.user_metadata?.full_name || "Discord User"}
+                        className="w-10 h-10 rounded-full border-2 border-white/40 cursor-pointer transition-all duration-300 hover:scale-105 hover:border-white/60"
+                      />
+                    </div>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52 bg-black/95 border border-white/20 rounded-xl shadow-lg py-1">
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>Account</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => window.location.href = "/"}>
-                        <Home className="h-4 w-4 mr-2" /> Home
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => window.location.href = "/apply"}>
-                        <UserCheck className="h-4 w-4 mr-2" /> Apply
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>Settings</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => window.location.href = "/settings"}>
-                        <Settings className="h-4 w-4 mr-2" /> Account Settings
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleLogout}>
-                        <LogOut className="h-4 w-4 mr-2" /> Log out
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
+                  <DropdownMenuContent align="end" className="fancy-dropdown w-64 p-2">
+                    <div className="menu-label">Account</div>
+                    <div 
+                      className="fancy-menu-item"
+                      onClick={() => window.location.href = "/"}
+                    >
+                      <Home className="h-4 w-4 item-icon inline-block" />
+                      <span>Home</span>
+                    </div>
+                    <div 
+                      className="fancy-menu-item"
+                      onClick={() => window.location.href = "/apply"}
+                    >
+                      <UserCheck className="h-4 w-4 item-icon inline-block" />
+                      <span>Apply</span>
+                    </div>
+                    <div className="menu-separator" />
+                    <div className="menu-label">Settings</div>
+                    <div 
+                      className="fancy-menu-item"
+                      onClick={() => window.location.href = "/settings"}
+                    >
+                      <Settings className="h-4 w-4 item-icon inline-block" />
+                      <span>Account Settings</span>
+                    </div>
+                    <div 
+                      className="fancy-menu-item"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4 item-icon inline-block" />
+                      <span>Log out</span>
+                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
