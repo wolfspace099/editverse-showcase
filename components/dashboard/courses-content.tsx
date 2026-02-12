@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { getAllCourses, getUserProgress } from "@/lib/supabaseApi"
+import { COURSE_CATEGORIES, COURSE_DIFFICULTIES } from "@/lib/course-filters"
 
 type Course = {
   id: string
@@ -33,8 +34,8 @@ type UserProgress = {
   courses: Course
 }
 
-const categories = ["All", "Editing course", "Motion Graphics", "Color Grading", "Audio"]
-const difficulties = ["All", "Beginner", "Intermediate", "Advanced"]
+const categories = [...COURSE_CATEGORIES]
+const difficulties = [...COURSE_DIFFICULTIES]
 
 export default function CoursesContent({ userId }: { userId: string }) {
   const [searchQuery, setSearchQuery] = useState("")

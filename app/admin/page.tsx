@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { getSupabaseClient } from "@/lib/supabaseClient"
+import { COURSE_CATEGORY_OPTIONS, COURSE_DIFFICULTY_OPTIONS } from "@/lib/course-filters"
 import {
   addAdminEmail,
   approveApplication,
@@ -302,8 +303,18 @@ export default function AdminPage() {
                 <div className="grid md:grid-cols-2 gap-3">
                   <LabeledInput label="Title" value={courseForm.title} onChange={(v) => setCourseForm({ ...courseForm, title: v })} />
                   <LabeledInput label="Image URL" value={courseForm.image_url} onChange={(v) => setCourseForm({ ...courseForm, image_url: v })} />
-                  <LabeledInput label="Category" value={courseForm.category} onChange={(v) => setCourseForm({ ...courseForm, category: v })} />
-                  <LabeledInput label="Difficulty" value={courseForm.difficulty} onChange={(v) => setCourseForm({ ...courseForm, difficulty: v })} />
+                  <LabeledSelect
+                    label="Category"
+                    value={courseForm.category}
+                    options={COURSE_CATEGORY_OPTIONS}
+                    onChange={(v) => setCourseForm({ ...courseForm, category: v })}
+                  />
+                  <LabeledSelect
+                    label="Difficulty"
+                    value={courseForm.difficulty}
+                    options={COURSE_DIFFICULTY_OPTIONS}
+                    onChange={(v) => setCourseForm({ ...courseForm, difficulty: v })}
+                  />
                   <LabeledInput label="Duration" value={String(courseForm.duration_minutes)} type="number" onChange={(v) => setCourseForm({ ...courseForm, duration_minutes: Number(v || 0) })} />
                   <LabeledInput label="Order" value={String(courseForm.order_index)} type="number" onChange={(v) => setCourseForm({ ...courseForm, order_index: Number(v || 0) })} />
                   <div className="md:col-span-2"><label className="text-xs text-white/60">Description</label><Textarea value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} /></div>
@@ -442,6 +453,35 @@ export default function AdminPage() {
 
 function LabeledInput({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
   return <div><label className="text-xs text-white/60">{label}</label><Input type={type} value={value} onChange={(e) => onChange(e.target.value)} /></div>
+}
+
+function LabeledSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: readonly string[]
+  onChange: (v: string) => void
+}) {
+  return (
+    <div>
+      <label className="text-xs text-white/60">{label}</label>
+      <select
+        className="h-10 rounded-md bg-transparent border border-white/20 px-3 text-sm w-full"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
 }
 
 function LessonRow({ lesson, onEdit, onDelete }: { lesson: Lesson; onEdit: (lesson: Lesson) => void; onDelete: (id: string) => void }) {
