@@ -1,0 +1,17 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "mcp": {
+        "hyperbrowser": {
+            "type": "local",
+            "enabled": true,
+            "command": [
+                "npx",
+                "-y",
+                "hyperbrowser-mcp"
+            ],
+            "environment": {
+                "HYPERBROWSER_API_KEY": "hb_9c684daf9b3edc40d1f8e3f10161"
+            }
+        }
+    }
+}
