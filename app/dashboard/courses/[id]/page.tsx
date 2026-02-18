@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useMemo, useState, useRef } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { GeistSans } from "geist/font/sans"
 import { Header } from "@/components/dashboard/header"
 import { Button } from "@/components/ui/button"
@@ -12,9 +12,9 @@ import {
   ChevronUp,
   Circle,
   Clock,
-  Menu,
-  Play
+  Menu
 } from "lucide-react"
+import VideoPlayer from "@/components/video-player"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import {
@@ -74,10 +74,8 @@ function CoursePlayerContent() {
   const [userId, setUserId] = useState<string | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
-  const [isPlaying, setIsPlaying] = useState(false)
   const [applicationStatus, setApplicationStatus] = useState<"approved" | "pending" | "rejected" | "none" | null>(null)
   const [rejectionReason, setRejectionReason] = useState<string | null>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     async function getUser() {
@@ -118,9 +116,7 @@ function CoursePlayerContent() {
     }
   }, [userId, courseId, applicationStatus])
 
-  useEffect(() => {
-    setIsPlaying(false)
-  }, [currentLesson?.id])
+
 
   async function loadCourseData() {
     setLoading(true)
@@ -140,7 +136,7 @@ function CoursePlayerContent() {
       if (chaptersData) {
         const sortedChapters = chaptersData.sort((a, b) => a.order_index - b.order_index)
         setChapters(sortedChapters)
-        
+
         // Expand all chapters by default
         setExpandedChapters(new Set(sortedChapters.map(c => c.id)))
       }
@@ -182,7 +178,7 @@ function CoursePlayerContent() {
     const grouped: { [key: string]: Lesson[] } = {
       unassigned: []
     }
-    
+
     chapters.forEach(chapter => {
       grouped[chapter.id] = []
     })
@@ -209,7 +205,6 @@ function CoursePlayerContent() {
 
   async function handleLessonSelect(lesson: Lesson) {
     setCurrentLesson(lesson)
-    setIsPlaying(false)
 
     if (userId) {
       await updateCourseProgress(userId, courseId, {
@@ -291,14 +286,14 @@ function CoursePlayerContent() {
       applicationStatus === "pending"
         ? "Application Under Review"
         : applicationStatus === "rejected"
-        ? "Application Rejected"
-        : "Application Required"
+          ? "Application Rejected"
+          : "Application Required"
     const description =
       applicationStatus === "pending"
         ? "Your application is still being reviewed. You can browse the dashboard while you wait."
         : applicationStatus === "rejected"
-        ? "Your application was not approved. You currently cannot open course lessons."
-        : "You need to submit an application before you can open courses."
+          ? "Your application was not approved. You currently cannot open course lessons."
+          : "You need to submit an application before you can open courses."
 
     return (
       <div className={`${GeistSans.className} min-h-screen bg-black text-white`}>
@@ -399,9 +394,8 @@ function CoursePlayerContent() {
           <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
             {/* Sidebar */}
             <aside
-              className={`${
-                sidebarCollapsed ? "hidden" : "block"
-              } lg:block border border-white/10 rounded-2xl bg-black/40 backdrop-blur`}
+              className={`${sidebarCollapsed ? "hidden" : "block"
+                } lg:block border border-white/10 rounded-2xl bg-black/40 backdrop-blur`}
             >
               <div className="p-5 border-b border-white/10">
                 <div className="flex items-center justify-between">
@@ -424,7 +418,7 @@ function CoursePlayerContent() {
                 {chapters.map((chapter) => {
                   const chapterLessons = lessonsByChapter[chapter.id] || []
                   const isExpanded = expandedChapters.has(chapter.id)
-                  
+
                   return (
                     <div key={chapter.id} className="mb-2">
                       <button
@@ -449,11 +443,10 @@ function CoursePlayerContent() {
                               <button
                                 key={lesson.id}
                                 onClick={() => handleLessonSelect(lesson)}
-                                className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-3 ${
-                                  isCurrent
+                                className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-3 ${isCurrent
                                     ? "bg-white/10 text-white"
                                     : "text-white/60 hover:bg-white/5 hover:text-white"
-                                }`}
+                                  }`}
                               >
                                 <div className="flex-shrink-0">
                                   {isCompleted ? (
@@ -490,11 +483,10 @@ function CoursePlayerContent() {
                           <button
                             key={lesson.id}
                             onClick={() => handleLessonSelect(lesson)}
-                            className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-3 ${
-                              isCurrent
+                            className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-3 ${isCurrent
                                 ? "bg-white/10 text-white"
                                 : "text-white/60 hover:bg-white/5 hover:text-white"
-                            }`}
+                              }`}
                           >
                             <div className="flex-shrink-0">
                               {isCompleted ? (
@@ -519,57 +511,32 @@ function CoursePlayerContent() {
             {/* Main Content */}
             <section className="space-y-6">
               <div className="rounded-2xl border border-white/10 bg-black overflow-hidden relative">
-                <div className="aspect-video bg-black relative group">
+                <div className="aspect-video bg-black relative">
                   {currentLesson ? (
                     <>
-                      {isPlaying ? (
-                        <div className="w-full h-full">
-                          {currentLesson.video_url.includes("youtube.com") ||
-                          currentLesson.video_url.includes("youtu.be") ? (
-                            <iframe
-                              src={`https://www.youtube.com/embed/${
-                                currentLesson.video_url.includes("v=")
-                                  ? currentLesson.video_url.split("v=")[1].split("&")[0]
-                                  : currentLesson.video_url.split("/").pop()
-                              }?autoplay=1`}
-                              className="w-full h-full border-0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                            />
-                          ) : currentLesson.video_url.includes("vimeo.com") ? (
-                            <iframe
-                              src={`https://player.vimeo.com/video/${currentLesson.video_url.split("/").pop()}?autoplay=1`}
-                              className="w-full h-full border-0"
-                              allow="autoplay; fullscreen; picture-in-picture"
-                              allowFullScreen
-                            />
-                          ) : (
-                            <video
-                              ref={videoRef}
-                              src={currentLesson.video_url}
-                              controls
-                              autoPlay
-                              className="w-full h-full"
-                            />
-                          )}
-                        </div>
+                      {currentLesson.video_url.includes("youtube.com") ||
+                        currentLesson.video_url.includes("youtu.be") ? (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${currentLesson.video_url.includes("v=")
+                              ? currentLesson.video_url.split("v=")[1].split("&")[0]
+                              : currentLesson.video_url.split("/").pop()
+                            }?autoplay=0`}
+                          className="w-full h-full border-0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : currentLesson.video_url.includes("vimeo.com") ? (
+                        <iframe
+                          src={`https://player.vimeo.com/video/${currentLesson.video_url.split("/").pop()}`}
+                          className="w-full h-full border-0"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowFullScreen
+                        />
                       ) : (
-                        <button
-                          onClick={() => setIsPlaying(true)}
-                          className="w-full h-full relative"
-                        >
-                          <img
-                            src={course.image_url}
-                            alt={currentLesson.title}
-                            className="w-full h-full object-cover opacity-80"
-                          />
-
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                              <Play className="h-8 w-8 text-black ml-1" />
-                            </div>
-                          </div>
-                        </button>
+                        <VideoPlayer
+                          src={currentLesson.video_url}
+                          poster={course.image_url}
+                        />
                       )}
                     </>
                   ) : (

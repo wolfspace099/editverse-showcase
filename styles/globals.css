@@ -123,3 +123,223 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   EditVerse Video.js Dark Theme
+   ═══════════════════════════════════════════════════════ */
+
+/* Container */
+.editverse-video-player {
+  background: #000;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.editverse-video-player .video-js {
+  background-color: #000;
+  color: #fff;
+  font-family: inherit;
+}
+
+/* ── Big Play Button ── */
+.editverse-video-player .vjs-big-play-button {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  width: 72px !important;
+  height: 72px !important;
+  line-height: 72px !important;
+  margin-top: -36px !important;
+  margin-left: -36px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.editverse-video-player .vjs-big-play-button:hover,
+.editverse-video-player .vjs-big-play-button:focus {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  transform: scale(1.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.editverse-video-player .vjs-big-play-button .vjs-icon-placeholder::before {
+  font-size: 36px !important;
+  line-height: 72px !important;
+  color: #fff !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Hide big play button when playing */
+.editverse-video-player .video-js.vjs-playing .vjs-big-play-button,
+.editverse-video-player .video-js.vjs-has-started .vjs-big-play-button {
+  display: none !important;
+}
+
+/* ── Control Bar ── */
+.editverse-video-player .vjs-control-bar {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%) !important;
+  height: 44px !important;
+  padding: 0 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease !important;
+}
+
+.editverse-video-player .video-js:hover .vjs-control-bar,
+.editverse-video-player .video-js.vjs-paused .vjs-control-bar,
+.editverse-video-player .video-js.vjs-user-active .vjs-control-bar {
+  opacity: 1;
+}
+
+/* ── Control Buttons ── */
+.editverse-video-player .vjs-control-bar .vjs-button {
+  color: rgba(255, 255, 255, 0.85) !important;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.editverse-video-player .vjs-control-bar .vjs-button:hover {
+  color: #fff !important;
+  transform: scale(1.1);
+}
+
+/* Play toggle icon size */
+.editverse-video-player .vjs-play-control .vjs-icon-placeholder::before {
+  font-size: 18px !important;
+}
+
+/* ── Progress Bar ── */
+.editverse-video-player .vjs-progress-control {
+  height: 100%;
+}
+
+.editverse-video-player .vjs-progress-holder {
+  height: 3px !important;
+  margin: 0 !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 2px;
+  transition: height 0.15s ease;
+}
+
+.editverse-video-player .vjs-progress-control:hover .vjs-progress-holder {
+  height: 5px !important;
+}
+
+.editverse-video-player .vjs-play-progress {
+  background: #fff !important;
+  border-radius: 2px;
+}
+
+.editverse-video-player .vjs-play-progress::before {
+  color: #fff !important;
+  font-size: 10px !important;
+  top: -4px;
+  transition: transform 0.15s ease;
+}
+
+.editverse-video-player .vjs-progress-control:hover .vjs-play-progress::before {
+  transform: scale(1.4);
+}
+
+.editverse-video-player .vjs-load-progress {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 2px;
+}
+
+.editverse-video-player .vjs-load-progress div {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* ── Time Display ── */
+.editverse-video-player .vjs-time-control {
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  padding: 0 4px !important;
+  min-width: auto !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.editverse-video-player .vjs-time-divider {
+  padding: 0 !important;
+  min-width: 12px !important;
+}
+
+/* ── Volume Panel ── */
+.editverse-video-player .vjs-volume-panel {
+  transition: width 0.3s ease;
+}
+
+.editverse-video-player .vjs-volume-bar {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 2px;
+}
+
+.editverse-video-player .vjs-volume-level {
+  background: #fff !important;
+  border-radius: 2px;
+}
+
+/* ── Playback Rate Menu ── */
+.editverse-video-player .vjs-playback-rate .vjs-playback-rate-value {
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  line-height: 44px !important;
+}
+
+.editverse-video-player .vjs-menu {
+  background: rgba(0, 0, 0, 0.9) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.editverse-video-player .vjs-menu-item {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 12px !important;
+  padding: 6px 16px !important;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.editverse-video-player .vjs-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+}
+
+.editverse-video-player .vjs-menu-item.vjs-selected {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+/* ── Poster Image ── */
+.editverse-video-player .vjs-poster {
+  background-size: cover;
+  background-position: center;
+}
+
+/* ── Loading Spinner ── */
+.editverse-video-player .vjs-loading-spinner {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.editverse-video-player .vjs-loading-spinner::before,
+.editverse-video-player .vjs-loading-spinner::after {
+  border-top-color: #fff !important;
+}
+
+/* ── Text Track / Subtitles ── */
+.editverse-video-player .vjs-text-track-display {
+  font-family: inherit;
+}
+
+/* ── Tooltip ── */
+.editverse-video-player .vjs-time-tooltip,
+.editverse-video-player .vjs-mouse-display .vjs-time-tooltip {
+  background: rgba(0, 0, 0, 0.85) !important;
+  color: #fff !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
